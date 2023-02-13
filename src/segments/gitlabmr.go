@@ -45,15 +45,21 @@ const (
 	GitlabAPIVersion properties.Property = "gitlab_api_version"
 	AuthorUsername   properties.Property = "author_username"
 	AuthorOnly       properties.Property = "author_only"
+	RootOnly         properties.Property = "root_only"
 )
 
 func (mr *GitlabMR) Enabled() bool {
 	inProject := false
 	gitRoot, gerr := find.Repo()
 	if gerr != nil {
-		mr.Count = "no root"
-		return true
-		// return false
+		return false
+	}
+	rootOnly := mr.props.GetBool(RootOnly, true)
+	if rootOnly {
+		cwd, _ := os.Getwd()
+		if cwd != gitRoot.Path {
+			return false
+		}
 	}
 	gitDir := fmt.Sprintf("%s/.git", gitRoot.Path)
 	if stat, err := os.Stat(gitDir); err == nil {
