@@ -24,9 +24,9 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/wayneashleyberry/terminal-dimensions v1.1.0
 	golang.org/x/crypto v0.5.0 // indirect
-	golang.org/x/image v0.3.0
+	golang.org/x/image v0.5.0
 	golang.org/x/sys v0.5.0
-	golang.org/x/text v0.6.0
+	golang.org/x/text v0.7.0
 	gopkg.in/ini.v1 v1.67.0
 )
 
@@ -125,4 +125,4 @@ replace github.com/shirou/gopsutil/v3 v3.22.10 => github.com/jandedobbeleer/gops
 
 replace github.com/gookit/config/v2 v2.1.8 => github.com/jandedobbeleer/config/v2 v2.1.8-1
 
-replace github.com/goccy/go-yaml v1.9.8 => github.com/jandedobbeleer/go-yaml v1.9.8-2
+replace github.com/goccy/go-yaml v1.9.8 => github.com/jandedobbeleer/go-yaml v1.9.8-3
