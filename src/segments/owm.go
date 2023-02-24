@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/platform"
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
@@ -22,6 +23,8 @@ type Owm struct {
 }
 
 const (
+	// APIEnv environment variable that holds the openweathermap api key
+	APIEnv properties.Property = "apienv"
 	// APIKey openweathermap api key
 	APIKey properties.Property = "apikey"
 	// Location openweathermap location
@@ -74,11 +77,16 @@ func (d *Owm) getResult() (*owmDataResponse, error) {
 		}
 	}
 
+	apiEnv := d.props.GetString(APIEnv, "")
 	apikey := d.props.GetString(APIKey, ".")
 	location := d.props.GetString(Location, "De Bilt,NL")
 	units := d.props.GetString(Units, "standard")
 	httpTimeout := d.props.GetInt(properties.HTTPTimeout, properties.DefaultHTTPTimeout)
 	d.URL = fmt.Sprintf("http://api.openweathermap.org/data/2.5/weather?q=%s&units=%s&appid=%s", location, units, apikey)
+
+	if apiEnv != "" {
+		apikey = os.Getenv(apiEnv)
+	}
 
 	body, err := d.env.HTTPRequest(d.URL, nil, httpTimeout)
 	if err != nil {
