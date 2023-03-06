@@ -16,10 +16,14 @@ type Owm struct {
 	env   platform.Environment
 
 	Temperature int
+	FeelsLike   string
 	Weather     string
 	URL         string
 	units       string
 	UnitIcon    string
+	Standard    string
+	Imperial    string
+	Metric      string
 }
 
 const (
@@ -35,15 +39,24 @@ const (
 	CacheKeyResponse string = "owm_response"
 	// CacheKeyURL key used when caching the url responsible for the response
 	CacheKeyURL string = "owm_url"
+	// WithUnits is used to swith on an off the units on the individual measurements
+	WithUnits properties.Property = "with_units"
+
+	ImperialIndicator = "°F"
+	MetricIndicator   = "°C"
+	StandardIndicator = "°K"
 )
 
 type weather struct {
+	ID               int    `json:"id"`
 	ShortDescription string `json:"main"`
 	Description      string `json:"description"`
 	TypeID           string `json:"icon"`
 }
+
 type temperature struct {
-	Value float64 `json:"temp"`
+	Value     float64 `json:"temp"`
+	FeelsLike float64 `json:"feels_like"`
 }
 
 type owmDataResponse struct {
@@ -82,16 +95,17 @@ func (d *Owm) getResult() (*owmDataResponse, error) {
 	location := d.props.GetString(Location, "De Bilt,NL")
 	units := d.props.GetString(Units, "standard")
 	httpTimeout := d.props.GetInt(properties.HTTPTimeout, properties.DefaultHTTPTimeout)
-	d.URL = fmt.Sprintf("http://api.openweathermap.org/data/2.5/weather?q=%s&units=%s&appid=%s", location, units, apikey)
-
 	if apiEnv != "" {
-		apikey = os.Getenv(apiEnv)
+		apikey, _ = os.LookupEnv(apiEnv)
 	}
+
+	d.URL = fmt.Sprintf("http://api.openweathermap.org/data/2.5/weather?q=%s&units=%s&appid=%s", location, units, apikey)
 
 	body, err := d.env.HTTPRequest(d.URL, nil, httpTimeout)
 	if err != nil {
 		return new(owmDataResponse), err
 	}
+	// fmt.Printf("%#v\n", body)
 	err = json.Unmarshal(body, &response)
 	if err != nil {
 		return new(owmDataResponse), err
@@ -114,62 +128,165 @@ func (d *Owm) setStatus() error {
 	if len(q.Data) == 0 {
 		return errors.New("No data found")
 	}
-	id := q.Data[0].TypeID
+	// id := q.Data[0].TypeID
+	wid := q.Data[0].ID
+	name := q.Data[0].ShortDescription
 
 	d.Temperature = int(math.Round(q.temperature.Value))
-	icon := ""
-	switch id {
-	case "01n":
-		fallthrough
-	case "01d":
-		icon = "\ufa98"
-	case "02n":
-		fallthrough
-	case "02d":
-		icon = "\ufa94"
-	case "03n":
-		fallthrough
-	case "03d":
-		icon = "\ue33d"
-	case "04n":
-		fallthrough
-	case "04d":
-		icon = "\ue312"
-	case "09n":
-		fallthrough
-	case "09d":
-		icon = "\ufa95"
-	case "10n":
-		fallthrough
-	case "10d":
-		icon = "\ue308"
-	case "11n":
-		fallthrough
-	case "11d":
-		icon = "\ue31d"
-	case "13n":
-		fallthrough
-	case "13d":
-		icon = "\ue31a"
-	case "50n":
-		fallthrough
-	case "50d":
-		icon = "\ue313"
+	d.FeelsLike = fmt.Sprintf("%d", int(math.Round(q.temperature.FeelsLike)))
+	icon := "☀️"
+	// switch id {
+	// case "01n":
+	// 	fallthrough
+	// case "01d":
+	// 	icon = "\ufa98"
+	// case "02n":
+	// 	fallthrough
+	// case "02d":
+	// 	icon = "\ufa94"
+	// case "03n":
+	// 	fallthrough
+	// case "03d":
+	// 	icon = "\ue33d"
+	// case "04n":
+	// 	fallthrough
+	// case "04d":
+	// 	icon = "\ue312"
+	// case "09n":
+	// 	fallthrough
+	// case "09d":
+	// 	icon = "\ufa95"
+	// case "10n":
+	// 	fallthrough
+	// case "10d":
+	// 	icon = "\ue308"
+	// case "11n":
+	// 	fallthrough
+	// case "11d":
+	// 	icon = "\ue31d"
+	// case "13n":
+	// 	fallthrough
+	// case "13d":
+	// 	icon = "\ue31a"
+	// case "50n":
+	// 	fallthrough
+	// case "50d":
+	// 	icon = "\ue313"
+	// }
+	switch name {
+	case "Thunderstorm":
+		icon = "⛈"
+	case "Drizzle":
+		icon = "🌦"
+	case "Rain":
+		icon = "🌧"
+	case "Snow":
+		icon = "🌨"
+	case "Tornado":
+		icon = "🌪"
+	case "Fog":
+		icon = "💨"
+	case "Clouds":
+		if wid == 801 {
+			icon = "️🌤"
+		}
+		if wid == 802 {
+			icon = "⛅️"
+		}
+		if wid == 803 {
+			icon = "🌥"
+		}
+		if wid == 804 {
+			icon = "☁️"
+		}
 	}
 	d.Weather = icon
 	d.units = units
 	d.UnitIcon = "\ue33e"
+
+	withUnits := d.props.GetBool(WithUnits, true)
 	switch d.units {
 	case "imperial":
-		d.UnitIcon = "°F" // \ue341"
+		d.UnitIcon = ImperialIndicator // "°F" // \ue341"
+		f := int(math.Round(q.temperature.Value))
+		c := convertFahrenheitToCelsius(q.temperature.Value)
+		k := convertFahrenheitToKelvin(q.temperature.Value)
+		if withUnits {
+			d.FeelsLike = fmt.Sprintf("%s%s", d.FeelsLike, ImperialIndicator)
+			d.Imperial = fmt.Sprintf("%d%s", f, ImperialIndicator)
+			d.Metric = fmt.Sprintf("%d%s", c, MetricIndicator)
+			d.Standard = fmt.Sprintf("%d%s", k, StandardIndicator)
+		} else {
+			d.Imperial = fmt.Sprintf("%d", f)
+			d.Metric = fmt.Sprintf("%d", c)
+			d.Standard = fmt.Sprintf("%d", k)
+		}
 	case "metric":
-		d.UnitIcon = "°C" // \ue339"
+		d.UnitIcon = MetricIndicator // "°C" // \ue339"
+		c := int(math.Round(q.temperature.Value))
+		f := convertCelsiusToFahrenheit(q.temperature.Value)
+		k := convertCelsiusToKelvin(q.temperature.Value)
+		if withUnits {
+			d.FeelsLike = fmt.Sprintf("%s%s", d.FeelsLike, MetricIndicator)
+			d.Imperial = fmt.Sprintf("%d%s", f, ImperialIndicator)
+			d.Metric = fmt.Sprintf("%d%s", c, MetricIndicator)
+			d.Standard = fmt.Sprintf("%d%s", k, StandardIndicator)
+		} else {
+			d.Imperial = fmt.Sprintf("%d", f)
+			d.Metric = fmt.Sprintf("%d", c)
+			d.Standard = fmt.Sprintf("%d", k)
+		}
 	case "":
 		fallthrough
 	case "standard":
-		d.UnitIcon = "°K" // \ufa05"
+		d.UnitIcon = StandardIndicator // "°K" // \ufa05"
+		k := int(math.Round(q.temperature.Value))
+		f := convertKelvinToFahrenheit(q.temperature.Value)
+		c := convertKelvinToCelsius(q.temperature.Value)
+		if withUnits {
+			d.FeelsLike = fmt.Sprintf("%s%s", d.FeelsLike, StandardIndicator)
+			d.Imperial = fmt.Sprintf("%d%s", f, ImperialIndicator)
+			d.Metric = fmt.Sprintf("%d%s", c, MetricIndicator)
+			d.Standard = fmt.Sprintf("%d%s", k, StandardIndicator)
+		} else {
+			d.Imperial = fmt.Sprintf("%d", f)
+			d.Metric = fmt.Sprintf("%d", c)
+			d.Standard = fmt.Sprintf("%d", k)
+		}
 	}
 	return nil
+}
+
+func convertFahrenheitToCelsius(value float64) int {
+	convertedValue := (value - 32) * 5.0 / 9.0
+	return int(math.Round(convertedValue))
+}
+
+func convertCelsiusToFahrenheit(value float64) int {
+	convertedValue := (value * 9.0 / 5.0) + 32
+	return int(math.Round(convertedValue))
+}
+
+func convertFahrenheitToKelvin(value float64) int {
+	//  F = 9/5(K - 273) + 32
+	convertedValue := (9.0/5.0)*(value-273.15) + 32
+	return int(math.Round(convertedValue))
+}
+
+func convertCelsiusToKelvin(value float64) int {
+	convertedValue := value + 273.15
+	return int(math.Round(convertedValue))
+}
+
+func convertKelvinToFahrenheit(value float64) int {
+	// K = 5/9(F - 32) + 273.15
+	convertedValue := 5.0/9.0*(value-32) + 273.15
+	return int(math.Round(convertedValue))
+}
+
+func convertKelvinToCelsius(value float64) int {
+	convertedValue := value - 273.15
+	return int(math.Round(convertedValue))
 }
 
 func (d *Owm) Init(props properties.Properties, env platform.Environment) {
