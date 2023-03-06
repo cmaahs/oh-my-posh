@@ -20,11 +20,3 @@ cd src
 go build -o ~/tbin/oh-my-posh
 ```
 
-```zsh
-cdwt  # choose: OMP-1/gitlab-mr-segment
-git merge maahs
-cd src
-go build -o ~/tbin/oh-my-posh
-```
-
-
