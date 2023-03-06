@@ -122,6 +122,8 @@ func (m Map) GetInt(property Property, defaultValue int) int {
 		return v
 	case int64:
 		return int(v)
+	case uint64:
+		return int(v)
 	case float64:
 		intValue, ok := val.(float64)
 		if !ok {
@@ -129,6 +131,7 @@ func (m Map) GetInt(property Property, defaultValue int) int {
 		}
 		return int(intValue)
 	default:
+		fmt.Printf("%T\n", v)
 		return defaultValue
 	}
 }
