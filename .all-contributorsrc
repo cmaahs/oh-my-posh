@@ -1547,7 +1547,8 @@
       "profile": "https://github.com/CodexLink",
       "contributions": [
         "design",
-        "doc"
+        "doc",
+        "code"
       ]
     },
     {
@@ -1585,6 +1586,33 @@
       "contributions": [
         "code",
         "design",
+        "doc"
+      ]
+    },
+    {
+      "login": "craftzneko",
+      "name": "craftzneko",
+      "avatar_url": "https://avatars.githubusercontent.com/u/662108?v=4",
+      "profile": "https://github.com/craftzneko",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "atlanswer",
+      "name": "甘亭",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17683244?v=4",
+      "profile": "http://waferlab.dev",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "Mertsch",
+      "name": "Mertsch",
+      "avatar_url": "https://avatars.githubusercontent.com/u/9402861?v=4",
+      "profile": "https://github.com/Mertsch",
+      "contributions": [
         "doc"
       ]
     }
