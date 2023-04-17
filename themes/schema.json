@@ -1740,7 +1740,8 @@
                       "folder",
                       "mixed",
                       "letter",
-                      "unique"
+                      "unique",
+                      "powerlevel"
                     ],
                     "default": "folder"
                   },
@@ -2862,7 +2863,16 @@
           },
           "then": {
             "title": "Clound Foundry Target segment",
-            "description": "https://ohmyposh.dev/docs/segments/cftarget"
+            "description": "https://ohmyposh.dev/docs/segments/cftarget",
+            "properties": {
+              "properties": {
+                "properties": {
+                  "display_mode": {
+                    "$ref": "#/definitions/display_mode"
+                  }
+                }
+              }
+            }
           }
         },
         {
@@ -3158,7 +3168,14 @@
     "transient_prompt": {
       "$ref": "#/definitions/extra_prompt",
       "title": "Transient Prompt Setting",
-      "description": "https://ohmyposh.dev/docs/configuration/transient"
+      "description": "https://ohmyposh.dev/docs/configuration/transient",
+      "properties": {
+        "filler": {
+          "type": "string",
+          "title": "Filler",
+          "description": "Right aligned filler text, will span the remaining width"
+        }
+      }
     },
     "valid_line": {
       "$ref": "#/definitions/extra_prompt",

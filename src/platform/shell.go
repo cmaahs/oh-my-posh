@@ -71,6 +71,7 @@ type Flags struct {
 	PromptCount   int
 	Cleared       bool
 	Version       string
+	TrueColor     bool
 }
 
 type CommandError struct {
@@ -188,6 +189,7 @@ type TemplateCache struct {
 	OS           string
 	WSL          bool
 	PromptCount  int
+	SHLVL        int
 	Segments     SegmentsCache
 
 	sync.RWMutex
@@ -255,6 +257,7 @@ type Environment interface {
 	CursorPosition() (row, col int)
 	SystemInfo() (*SystemInfo, error)
 	Debug(message string)
+	DebugF(format string, a ...any)
 	Error(err error)
 	Trace(start time.Time, args ...string)
 }
@@ -297,6 +300,14 @@ func (env *Shell) Init() {
 	if env.CmdFlags.Debug {
 		log.Enable()
 	}
+	if env.CmdFlags.Plain {
+		log.Plain()
+	}
+	trueColor := true
+	if env.Getenv("TERM_PROGRAM") == "Apple_Terminal" {
+		trueColor = false
+	}
+	env.CmdFlags.TrueColor = trueColor
 	env.fileCache = &fileCache{}
 	env.fileCache.Init(env.CachePath())
 	env.resolveConfigPath()
@@ -369,12 +380,16 @@ func (env *Shell) Debug(message string) {
 	log.Debug(message)
 }
 
-func (env *Shell) Error(err error) {
-	log.Error(err)
+func (env *Shell) DebugF(format string, a ...any) {
+	if !env.CmdFlags.Debug {
+		return
+	}
+	message := fmt.Sprintf(format, a...)
+	log.Debug(message)
 }
 
-func (env *Shell) debugF(fn func() string) {
-	log.DebugF(fn)
+func (env *Shell) Error(err error) {
+	log.Error(err)
 }
 
 func (env *Shell) Getenv(key string) string {
@@ -385,8 +400,9 @@ func (env *Shell) Getenv(key string) string {
 }
 
 func (env *Shell) Pwd() string {
+	env.Lock()
 	defer env.Trace(time.Now())
-	defer env.Debug(env.cwd)
+	defer env.Unlock()
 	if env.cwd != "" {
 		return env.cwd
 	}
@@ -400,6 +416,7 @@ func (env *Shell) Pwd() string {
 	}
 	if env.CmdFlags != nil && env.CmdFlags.PWD != "" {
 		env.cwd = correctPath(env.CmdFlags.PWD)
+		env.Debug(env.cwd)
 		return env.cwd
 	}
 	dir, err := os.Getwd()
@@ -408,6 +425,7 @@ func (env *Shell) Pwd() string {
 		return ""
 	}
 	env.cwd = correctPath(dir)
+	env.Debug(env.cwd)
 	return env.cwd
 }
 
@@ -443,7 +461,7 @@ func (env *Shell) HasFilesInDir(dir, pattern string) bool {
 		return false
 	}
 	hasFilesInDir := len(matches) > 0
-	env.debugF(func() string { return strconv.FormatBool(hasFilesInDir) })
+	env.DebugF("%t", hasFilesInDir)
 	return hasFilesInDir
 }
 
@@ -475,8 +493,9 @@ func (env *Shell) HasFolder(folder string) bool {
 		env.Debug("false")
 		return false
 	}
-	env.debugF(func() string { return strconv.FormatBool(f.IsDir()) })
-	return f.IsDir()
+	isDir := f.IsDir()
+	env.DebugF("%t", isDir)
+	return isDir
 }
 
 func (env *Shell) ResolveSymlink(path string) (string, error) {
@@ -512,13 +531,7 @@ func (env *Shell) LsDir(path string) []fs.DirEntry {
 		env.Error(err)
 		return nil
 	}
-	env.debugF(func() string {
-		var entriesStr string
-		for _, entry := range entries {
-			entriesStr += entry.Name() + "\n"
-		}
-		return entriesStr
-	})
+	env.DebugF("%v", entries)
 	return entries
 }
 
@@ -633,7 +646,7 @@ func (env *Shell) Shell() string {
 	// this is used for when scoop creates a shim, see
 	// https://github.com/jandedobbeleer/oh-my-posh/issues/2806
 	executable, _ := os.Executable()
-	if name == "cmd.exe" || name == executable {
+	if name == executable {
 		p, _ = p.Parent()
 		name, err = p.Name()
 		env.Debug("parent process name: " + name)
@@ -763,9 +776,7 @@ func (env *Shell) Logs() string {
 }
 
 func (env *Shell) TemplateCache() *TemplateCache {
-	env.Lock()
 	defer env.Trace(time.Now())
-	defer env.Unlock()
 	if env.tmplCache != nil {
 		return env.tmplCache
 	}
@@ -812,6 +823,11 @@ func (env *Shell) TemplateCache() *TemplateCache {
 	tmplCache.OS = goos
 	if goos == LINUX {
 		tmplCache.OS = env.Platform()
+	}
+
+	val := env.Getenv("SHLVL")
+	if shlvl, err := strconv.Atoi(val); err == nil {
+		tmplCache.SHLVL = shlvl
 	}
 
 	env.tmplCache = tmplCache

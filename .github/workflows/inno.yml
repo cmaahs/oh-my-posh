@@ -15,7 +15,7 @@ jobs:
         working-directory: ${{ github.workspace }}/packages/inno
     steps:
     - name: Checkout code 👋
-      uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f
+      uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
     - name: Build installer 📦
       id: build
       env:
@@ -25,7 +25,7 @@ jobs:
         $version = $env:GITHUB_REF.TrimStart("refs/tags/v")
         ./build.ps1 -Architecture ${{ matrix.arch }}  -Version $version
     - name: Upload artifacts 🆙
-      uses: actions/github-script@98814c53be79b1d30f795b907e553d8679345975
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}
         script: |
@@ -51,7 +51,7 @@ jobs:
     needs: publish
     steps:
     - name: Notify Winget Build 🙋🏾‍♀️
-      uses: actions/github-script@98814c53be79b1d30f795b907e553d8679345975
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
       with:
         github-token: ${{ secrets.GH_PAT }}
         script: |
@@ -63,7 +63,7 @@ jobs:
             inputs: {"version": process.env.GITHUB_REF.replace('refs/tags/v', '')}
           })
     - name: Notify Windows Store Build 👋
-      uses: actions/github-script@98814c53be79b1d30f795b907e553d8679345975
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
       with:
         github-token: ${{ secrets.GH_PAT }}
         script: |
@@ -75,7 +75,7 @@ jobs:
             inputs: {"version": process.env.GITHUB_REF.replace('refs/tags/v', '')}
           })
     - name: Notify Scoop Build 🤙
-      uses: actions/github-script@98814c53be79b1d30f795b907e553d8679345975
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
       with:
         github-token: ${{ secrets.GH_PAT }}
         script: |

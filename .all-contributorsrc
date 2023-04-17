@@ -1615,6 +1615,43 @@
       "contributions": [
         "doc"
       ]
+    },
+    {
+      "login": "marc2332",
+      "name": "Marc Espín",
+      "avatar_url": "https://avatars.githubusercontent.com/u/38158676?v=4",
+      "profile": "https://mespin.me/",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "ksdpmx",
+      "name": "jasonz",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3256083?v=4",
+      "profile": "https://github.com/ksdpmx",
+      "contributions": [
+        "code",
+        "doc"
+      ]
+    },
+    {
+      "login": "bsiegert",
+      "name": "Benny Siegert",
+      "avatar_url": "https://avatars.githubusercontent.com/u/866330?v=4",
+      "profile": "https://bentsukun.ch",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "kema-dev",
+      "name": "kema",
+      "avatar_url": "https://avatars.githubusercontent.com/u/54537427?v=4",
+      "profile": "http://www.kemadev.fr/fr/",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,

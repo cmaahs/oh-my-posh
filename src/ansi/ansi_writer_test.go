@@ -32,7 +32,7 @@ func TestWriteANSIColors(t *testing.T) {
 		{
 			Case:     "Bold with color override",
 			Input:    "<b><#ffffff>test</></b>",
-			Expected: "\x1b[1m\x1b[30m\x1b[38;2;255;255;255mtest\x1b[0m\x1b[30m\x1b[22m\x1b[0m",
+			Expected: "\x1b[1m\x1b[30m\x1b[38;2;255;255;255mtest\x1b[49m\x1b[30m\x1b[22m\x1b[0m",
 			Colors:   &Colors{Foreground: "black", Background: ParentBackground},
 		},
 		{
@@ -203,6 +203,7 @@ func TestWriteANSIColors(t *testing.T) {
 			Colors:             tc.Colors,
 			TerminalBackground: tc.TerminalBackground,
 			AnsiColors:         &DefaultColors{},
+			TrueColor:          true,
 		}
 		renderer.Init(shell.GENERIC)
 		renderer.Write(tc.Colors.Background, tc.Colors.Foreground, tc.Input)

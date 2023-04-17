@@ -1,4 +1,5 @@
 export POSH_THEME=::CONFIG::
+export POSH_SHELL_VERSION=$ZSH_VERSION
 export POSH_PID=$$
 export POWERLINE_COMMAND="oh-my-posh"
 export CONDA_PROMPT_MODIFIER=false
@@ -81,7 +82,21 @@ function _posh-tooltip() {
     zle .reset-prompt
   fi
 
+  # https://github.com/zsh-users/zsh-autosuggestions - clear suggestion to avoid keeping it after the newly inserted space
+  if [[ -n "$(zle -lL autosuggest-clear)" ]]; then
+    # only if suggestions not disabled (variable not set)
+    if ! [[ -v _ZSH_AUTOSUGGEST_DISABLED ]]; then
+      zle autosuggest-clear
+    fi
+  fi
   zle .self-insert
+  # https://github.com/zsh-users/zsh-autosuggestions - fetch new suggestion after the space
+  if [[ -n "$(zle -lL autosuggest-fetch)" ]]; then
+    # only if suggestions not disabled (variable not set)
+    if ! [[ -v _ZSH_AUTOSUGGEST_DISABLED ]]; then
+      zle autosuggest-fetch
+    fi
+  fi
 }
 
 function _posh-zle-line-init() {

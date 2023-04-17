@@ -18,12 +18,12 @@ jobs:
         working-directory: ${{ github.workspace }}/packages/scoop
     steps:
     - name: Checkout code 👋
-      uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f
+      uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
     - name: Update Template ✍️
       run: |
         ./build.ps1 -Version ${{ github.event.inputs.version }}
     - name: Upload artifacts 🆙
-      uses: actions/github-script@98814c53be79b1d30f795b907e553d8679345975
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
       with:
         github-token: ${{secrets.GITHUB_TOKEN}}
         script: |

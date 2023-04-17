@@ -39,6 +39,7 @@ type Segment struct {
 	Alias               string         `json:"alias,omitempty"`
 	MaxWidth            int            `json:"max_width,omitempty"`
 	MinWidth            int            `json:"min_width,omitempty"`
+	Filler              string         `json:"filler,omitempty"`
 
 	Enabled bool `json:"-"`
 
@@ -98,6 +99,8 @@ const (
 
 	// ANGULAR writes which angular cli version us currently active
 	ANGULAR SegmentType = "angular"
+	// ARGOCD writes the current argocd context
+	ARGOCD SegmentType = "argocd"
 	// AWS writes the active aws context
 	AWS SegmentType = "aws"
 	// AZ writes the Azure subscription info we're currently in
@@ -248,6 +251,7 @@ const (
 // Consumers of the library can also add their own segment writer.
 var Segments = map[SegmentType]func() SegmentWriter{
 	ANGULAR:       func() SegmentWriter { return &segments.Angular{} },
+	ARGOCD:        func() SegmentWriter { return &segments.Argocd{} },
 	AWS:           func() SegmentWriter { return &segments.Aws{} },
 	AZ:            func() SegmentWriter { return &segments.Az{} },
 	AZFUNC:        func() SegmentWriter { return &segments.AzFunc{} },
@@ -408,7 +412,11 @@ func (segment *Segment) mapSegmentWithWriter(env platform.Environment) error {
 
 	if f, ok := Segments[segment.Type]; ok {
 		writer := f()
-		writer.Init(segment.Properties, env)
+		wrapper := &properties.Wrapper{
+			Properties: segment.Properties,
+			Env:        env,
+		}
+		writer.Init(wrapper, env)
 		segment.writer = writer
 		return nil
 	}

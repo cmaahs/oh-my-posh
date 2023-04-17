@@ -6,13 +6,13 @@ export-env {
     # By default displays the right prompt on the first line
     # making it annoying when you have a multiline prompt
     # making the behavior different compared to other shells
-    let-env PROMPT_COMMAND_RIGHT = {''}
-    let-env NU_VERSION = (version | get version)
+    let-env PROMPT_COMMAND_RIGHT = ''
+    let-env POSH_SHELL_VERSION = (version | get version)
 
     # PROMPTS
-    let-env PROMPT_MULTILINE_INDICATOR = (^::OMP:: print secondary $"--config=($env.POSH_THEME)" --shell=nu $"--shell-version=($env.NU_VERSION)")
+    let-env PROMPT_MULTILINE_INDICATOR = (^::OMP:: print secondary $"--config=($env.POSH_THEME)" --shell=nu $"--shell-version=($env.POSH_SHELL_VERSION)")
 
-    let-env PROMPT_COMMAND = {
+    let-env PROMPT_COMMAND = { ||
         # We have to do this because the initial value of `$env.CMD_DURATION_MS` is always `0823`,
         # which is an official setting.
         # See https://github.com/nushell/nushell/discussions/6402#discussioncomment-3466687.
@@ -23,7 +23,7 @@ export-env {
         let clear = (history | last 1 | get 0.command) == "clear"
 
         let width = ((term size).columns | into string)
-        ^::OMP:: print primary $"--config=($env.POSH_THEME)" --shell=nu $"--shell-version=($env.NU_VERSION)" $"--execution-time=($cmd_duration)" $"--error=($env.LAST_EXIT_CODE)" $"--terminal-width=($width)" $"--cleared=($clear)"
+        ^::OMP:: print primary $"--config=($env.POSH_THEME)" --shell=nu $"--shell-version=($env.POSH_SHELL_VERSION)" $"--execution-time=($cmd_duration)" $"--error=($env.LAST_EXIT_CODE)" $"--terminal-width=($width)" $"--cleared=($clear)"
     }
 }
 
