@@ -13,6 +13,10 @@ offers a few standard properties to work with.
 
 ## Global properties
 
+These properties can be used anywhere, in any segment. If a segment contains a property with the same name,
+the segment property value will be used instead. In case you want to use the global property, you can prefix
+it with `.$` to reference it directly.
+
 | Name            | Type      | Description                                                       |
 | --------------- | --------- | ----------------------------------------------------------------- |
 | `.Root`         | `boolean` | is the current user root/admin or not                             |
@@ -176,7 +180,7 @@ If you want to for example use the [git][git] segment's `.UpstreamGone` property
 do so like this:
 
 ```json
-"template": " {{ if .Segments.Git.UpstreamGone }}\uf7d3{{ else if gt .Code 0 }}\uf00d{{ else }}\uf00c{{ end }} "
+"template": " {{ if .Segments.Git.UpstreamGone }}\ueb05{{ else if gt .Code 0 }}\uf00d{{ else }}\uf00c{{ end }} "
 ```
 
 :::caution
@@ -223,7 +227,7 @@ to distinct between both. For example:
 If you want to know if a specific segment is active, you can use the `.Segments.Contains` function, for example:
 
 ```json
-"template": "{{ if .Segments.Contains \"Git\" }}\uf7d3{{ else if gt .Code 0 }}\uf00d{{ else }}\uf00c{{ end }} "
+"template": "{{ if .Segments.Contains \"Git\" }}\ueb05{{ else if gt .Code 0 }}\uf00d{{ else }}\uf00c{{ end }} "
 ```
 
 ## Text decoration

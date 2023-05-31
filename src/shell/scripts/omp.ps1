@@ -123,18 +123,24 @@ New-Module -Name "oh-my-posh-core" -ScriptBlock {
     if (("::TOOLTIPS::" -eq "true") -and ($ExecutionContext.SessionState.LanguageMode -ne "ConstrainedLanguage")) {
         Set-PSReadLineKeyHandler -Key Spacebar -BriefDescription 'OhMyPoshSpaceKeyHandler' -ScriptBlock {
             [Microsoft.PowerShell.PSConsoleReadLine]::Insert(' ')
-            $position = $host.UI.RawUI.CursorPosition
-            $cleanPSWD = Get-CleanPSWD
             $command = $null
             [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$command, [ref]$null)
-            $command = $command.Trim().Split(" ", 2) | Select-Object -First 1
-            if ($command -eq $script:ToolTipCommand) {
+            $command = $command.TrimStart().Split(" ", 2) | Select-Object -First 1
+            # ignore an empty/repeated tip
+            if ($command -eq '' -or $command -eq $script:ToolTipCommand) {
                 return
             }
-            $script:ToolTipCommand = $command
+            $position = $host.UI.RawUI.CursorPosition
+            $cleanPSWD = Get-CleanPSWD
             $standardOut = @(Start-Utf8Process $script:OMPExecutable @("print", "tooltip", "--error=$script:ErrorCode", "--shell=$script:ShellName", "--pswd=$cleanPSWD", "--config=$env:POSH_THEME", "--command=$command", "--shell-version=$script:PSVersion"))
+            # ignore an empty tooltip
+            if ($standardOut -eq '') {
+                return
+            }
             Write-Host $standardOut -NoNewline
             $host.UI.RawUI.CursorPosition = $position
+            # cache the tip command
+            $script:ToolTipCommand = $command
             # we need this workaround to prevent the text after cursor from disappearing when the tooltip is rendered
             [Microsoft.PowerShell.PSConsoleReadLine]::Insert(' ')
             [Microsoft.PowerShell.PSConsoleReadLine]::Undo()
@@ -142,15 +148,14 @@ New-Module -Name "oh-my-posh-core" -ScriptBlock {
     }
 
     function Set-TransientPrompt {
-        param(
-            [string]$Key
-        )
-
         $previousOutputEncoding = [Console]::OutputEncoding
+        $executingCommand = $false
+
         try {
             $parseErrors = $null
             [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$null, [ref]$null, [ref]$parseErrors, [ref]$null)
             if ($parseErrors.Count -eq 0) {
+                $executingCommand = $true
                 $script:TransientPrompt = $true
                 [Console]::OutputEncoding = [Text.Encoding]::UTF8
                 [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt()
@@ -168,21 +173,46 @@ New-Module -Name "oh-my-posh-core" -ScriptBlock {
                     [Microsoft.PowerShell.PSConsoleReadLine]::Undo()
                 }
             }
-            switch ($Key) {
-                "Ctrl+c" { [Microsoft.PowerShell.PSConsoleReadLine]::CopyOrCancelLine() }
-                Default { [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine() }
-            }
             [Console]::OutputEncoding = $previousOutputEncoding
         }
 
+        return $executingCommand
     }
 
     if (("::TRANSIENT::" -eq "true") -and ($ExecutionContext.SessionState.LanguageMode -ne "ConstrainedLanguage")) {
         Set-PSReadLineKeyHandler -Key Enter -BriefDescription 'OhMyPoshEnterKeyHandler' -ScriptBlock {
-            Set-TransientPrompt -Key "Enter"
+            $executingCommand = Set-TransientPrompt
+            [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
+            # Write FTCS_COMMAND_EXECUTED after accepting the input - it should still happen before execution
+            if (("::FTCS_MARKS::" -eq "true") -and $executingCommand) {
+                Write-Host "$([char]0x1b)]133;C`a" -NoNewline
+            }
         }
         Set-PSReadLineKeyHandler -Key Ctrl+c -BriefDescription 'OhMyPoshCtrlCKeyHandler' -ScriptBlock {
-            Set-TransientPrompt -Key "Ctrl+c"
+            $start = $null
+            [Microsoft.PowerShell.PSConsoleReadLine]::GetSelectionState([ref]$start, [ref]$null)
+            # only render a transient prompt when no text is selected
+            if ($start -eq -1) {
+                Set-TransientPrompt
+            }
+            [Microsoft.PowerShell.PSConsoleReadLine]::CopyOrCancelLine()
+        }
+    }
+
+    if (("::FTCS_MARKS::" -eq "true") -and ("::TRANSIENT::" -ne "true") -and ($ExecutionContext.SessionState.LanguageMode -ne "ConstrainedLanguage")) {
+        Set-PSReadLineKeyHandler -Key Enter  -BriefDescription 'OhMyPoshEnterKeyHandler' -ScriptBlock {
+            $executingCommand = $false
+            try {
+                $parseErrors = $null
+                [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$null, [ref]$null, [ref]$parseErrors, [ref]$null)
+                $executingCommand = $parseErrors.Count -eq 0
+            }
+            finally {}
+            [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
+            # Write FTCS_COMMAND_EXECUTED after accepting the input - it should still happen before execution
+            if ($executingCommand) {
+                Write-Host "$([char]0x1b)]133;C`a" -NoNewline
+            }
         }
     }
 
@@ -334,8 +364,10 @@ Example:
         # error code should be updated only when a non-empty command is run
         if (($null -eq $lastHistory) -or ($script:LastHistoryId -eq $lastHistory.Id)) {
             $script:ExecutionTime = 0
+            $script:NoExitCode = $true
             return
         }
+        $script:NoExitCode = $false
         $script:LastHistoryId = $lastHistory.Id
         $script:ExecutionTime = ($lastHistory.EndExecutionTime - $lastHistory.StartExecutionTime).TotalMilliseconds
         if ($script:OriginalLastExecutionStatus) {
@@ -388,7 +420,7 @@ Example:
         $env:POSH_CURSOR_LINE = $Host.UI.RawUI.CursorPosition.Y + 1
         $env:POSH_CURSOR_COLUMN = $Host.UI.RawUI.CursorPosition.X + 1
 
-        $standardOut = @(Start-Utf8Process $script:OMPExecutable @("print", $script:PromptType, "--error=$script:ErrorCode", "--pswd=$cleanPSWD", "--execution-time=$script:ExecutionTime", "--stack-count=$stackCount", "--config=$env:POSH_THEME", "--shell-version=$script:PSVersion", "--terminal-width=$terminalWidth", "--shell=$script:ShellName"))
+        $standardOut = @(Start-Utf8Process $script:OMPExecutable @("print", $script:PromptType, "--error=$script:ErrorCode", "--pswd=$cleanPSWD", "--execution-time=$script:ExecutionTime", "--stack-count=$stackCount", "--config=$env:POSH_THEME", "--shell-version=$script:PSVersion", "--terminal-width=$terminalWidth", "--shell=$script:ShellName", "--no-exit-code=$script:NoExitCode"))
         # make sure PSReadLine knows if we have a multiline prompt
         Set-PSReadLineOption -ExtraPromptLineCount (($standardOut | Measure-Object -Line).Lines - 1)
         # the output can be multiline, joining these ensures proper rendering by adding line breaks with `n
@@ -396,6 +428,9 @@ Example:
 
         # remove any posh-git status
         $env:POSH_GIT_STATUS = $null
+
+        # remove cached tip command
+        $script:ToolTipCommand = ""
 
         # restore the orignal last exit code
         $global:LASTEXITCODE = $script:OriginalLastExitCode

@@ -22,6 +22,7 @@ var (
 	command      string
 	shellVersion string
 	plain        bool
+	noExitCode   bool
 )
 
 // printCmd represents the prompt command
@@ -60,6 +61,8 @@ var printCmd = &cobra.Command{
 			Plain:         plain,
 			Primary:       args[0] == "primary",
 			Cleared:       cleared,
+			NoExitCode:    noExitCode,
+			Version:       cliVersion,
 		}
 
 		eng := engine.New(flags)
@@ -67,21 +70,21 @@ var printCmd = &cobra.Command{
 
 		switch args[0] {
 		case "debug":
-			fmt.Print(eng.PrintExtraPrompt(engine.Debug))
+			fmt.Print(eng.ExtraPrompt(engine.Debug))
 		case "primary":
-			fmt.Print(eng.PrintPrimary())
+			fmt.Print(eng.Primary())
 		case "secondary":
-			fmt.Print(eng.PrintExtraPrompt(engine.Secondary))
+			fmt.Print(eng.ExtraPrompt(engine.Secondary))
 		case "transient":
-			fmt.Print(eng.PrintExtraPrompt(engine.Transient))
+			fmt.Print(eng.ExtraPrompt(engine.Transient))
 		case "right":
-			fmt.Print(eng.PrintRPrompt())
+			fmt.Print(eng.RPrompt())
 		case "tooltip":
-			fmt.Print(eng.PrintTooltip(command))
+			fmt.Print(eng.Tooltip(command))
 		case "valid":
-			fmt.Print(eng.PrintExtraPrompt(engine.Valid))
+			fmt.Print(eng.ExtraPrompt(engine.Valid))
 		case "error":
-			fmt.Print(eng.PrintExtraPrompt(engine.Error))
+			fmt.Print(eng.ExtraPrompt(engine.Error))
 		default:
 			_ = cmd.Help()
 		}
@@ -101,5 +104,6 @@ func init() { //nolint:gochecknoinits
 	printCmd.Flags().BoolVarP(&plain, "plain", "p", false, "plain text output (no ANSI)")
 	printCmd.Flags().BoolVar(&cleared, "cleared", false, "do we have a clear terminal or not")
 	printCmd.Flags().BoolVar(&eval, "eval", false, "output the prompt for eval")
+	printCmd.Flags().BoolVar(&noExitCode, "no-exit-code", false, "no valid exit code (cancelled or no command yet)")
 	RootCmd.AddCommand(printCmd)
 }

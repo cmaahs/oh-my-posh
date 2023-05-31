@@ -36,6 +36,9 @@ function set_poshcontext() {
 }
 
 function prompt_ohmyposh_preexec() {
+  if [[ "::FTCS_MARKS::" = "true" ]]; then
+    printf "\033]133;C\007"
+  fi
   omp_start_time=$(::OMP:: get millis)
 }
 
@@ -43,15 +46,17 @@ function prompt_ohmyposh_precmd() {
   omp_last_error=$?
   omp_stack_count=${#dirstack[@]}
   omp_elapsed=-1
+  no_exit_code="true"
   if [ $omp_start_time ]; then
     local omp_now=$(::OMP:: get millis --shell=zsh)
     omp_elapsed=$(($omp_now-$omp_start_time))
+    no_exit_code="false"
   fi
   count=$((POSH_PROMPT_COUNT+1))
   export POSH_PROMPT_COUNT=$count
   set_poshcontext
   _set_posh_cursor_position
-  eval "$(::OMP:: print primary --config="$POSH_THEME" --error="$omp_last_error" --execution-time="$omp_elapsed" --stack-count="$omp_stack_count" --eval --shell=zsh --shell-version="$ZSH_VERSION")"
+  eval "$(::OMP:: print primary --config="$POSH_THEME" --error="$omp_last_error" --execution-time="$omp_elapsed" --stack-count="$omp_stack_count" --eval --shell=zsh --shell-version="$ZSH_VERSION"  --no-exit-code="$no_exit_code")"
   unset omp_start_time
 }
 
@@ -69,19 +74,6 @@ if [[ "$(zle -lL zle-line-init)" = *"_posh-zle-line-init"* ]]; then
 fi
 
 function _posh-tooltip() {
-  # ignore an empty buffer
-  if [[ -z  "$BUFFER"  ]]; then
-    zle .self-insert
-    return
-  fi
-
-  local tooltip=$(::OMP:: print tooltip --config="$POSH_THEME" --shell=zsh --error="$omp_last_error" --command="$BUFFER" --shell-version="$ZSH_VERSION")
-  # ignore an empty tooltip
-  if [[ -n "$tooltip" ]]; then
-    RPROMPT=$tooltip
-    zle .reset-prompt
-  fi
-
   # https://github.com/zsh-users/zsh-autosuggestions - clear suggestion to avoid keeping it after the newly inserted space
   if [[ -n "$(zle -lL autosuggest-clear)" ]]; then
     # only if suggestions not disabled (variable not set)
@@ -97,6 +89,20 @@ function _posh-tooltip() {
       zle autosuggest-fetch
     fi
   fi
+
+  # get the first word of command line as tip
+  local tip=${${(MS)BUFFER##[[:graph:]]*}%%[[:space:]]*}
+  # ignore an empty tip
+  if [[ -z "$tip" ]]; then
+    return
+  fi
+  local tooltip=$(::OMP:: print tooltip --config="$POSH_THEME" --shell=zsh --error="$omp_last_error" --command="$tip" --shell-version="$ZSH_VERSION")
+  # ignore an empty tooltip
+  if [[ -z "$tooltip" ]]; then
+    return
+  fi
+  RPROMPT=$tooltip
+  zle .reset-prompt
 }
 
 function _posh-zle-line-init() {
@@ -108,7 +114,7 @@ function _posh-zle-line-init() {
     local -i ret=$?
     (( $+zle_bracketed_paste )) && print -r -n - $zle_bracketed_paste[2]
 
-    eval "$(::OMP:: print transient --error="$omp_last_error" --execution-time="$omp_elapsed" --stack-count="$omp_stack_count" --config="$POSH_THEME" --eval --shell=zsh --shell-version="$ZSH_VERSION")"
+    eval "$(::OMP:: print transient --error="$omp_last_error" --execution-time="$omp_elapsed" --stack-count="$omp_stack_count" --config="$POSH_THEME" --eval --shell=zsh --shell-version="$ZSH_VERSION" --no-exit-code="$no_exit_code")"
     zle .reset-prompt
 
     # If we received EOT, we exit the shell

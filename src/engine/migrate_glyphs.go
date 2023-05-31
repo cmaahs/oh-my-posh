@@ -6,32 +6,33 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/jandedobbeleer/oh-my-posh/src/platform"
 )
 
 type codePoints map[int]int
 
-func getGlyphCodePoints() codePoints {
+func getGlyphCodePoints() (codePoints, error) {
 	var codePoints = make(codePoints)
 
-	client := &http.Client{}
 	ctx, cncl := context.WithTimeout(context.Background(), time.Millisecond*time.Duration(5000))
 	defer cncl()
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://ohmyposh.dev/codepoints.csv", nil)
 	if err != nil {
-		return codePoints
+		return codePoints, &ConnectionError{reason: err.Error()}
 	}
 
-	response, err := client.Do(request)
+	response, err := platform.Client.Do(request)
 	if err != nil {
-		return codePoints
+		return codePoints, err
 	}
 
 	defer response.Body.Close()
 
 	lines, err := csv.NewReader(response.Body).ReadAll()
 	if err != nil {
-		return codePoints
+		return codePoints, err
 	}
 
 	for _, line := range lines {
@@ -48,5 +49,5 @@ func getGlyphCodePoints() codePoints {
 		}
 		codePoints[int(oldGlyph)] = int(newGlyph)
 	}
-	return codePoints
+	return codePoints, nil
 }

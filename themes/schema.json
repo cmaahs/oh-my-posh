@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
-  "$id": "http://example.com/example.json",
+  "$id": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
   "type": "object",
   "title": "The Oh My Posh theme definition",
   "description": "https://ohmyposh.dev/docs/configuration/overview",
@@ -303,6 +303,7 @@
             "terraform",
             "ui5tooling",
             "unity",
+            "upgrade",
             "wakatime",
             "winreg",
             "withings",
@@ -432,7 +433,7 @@
           },
           "then": {
             "title": "Project Segment",
-            "description": "https://ohmyposh.dev/docs/project"
+            "description": "https://ohmyposh.dev/docs/segments/project"
           }
         },
         {
@@ -445,7 +446,7 @@
           },
           "then": {
             "title": "NPM Segment",
-            "description": "https://ohmyposh.dev/docs/npm",
+            "description": "https://ohmyposh.dev/docs/segments/npm",
             "properties": {
               "properties": {
                 "properties": {
@@ -529,14 +530,14 @@
           },
           "then": {
             "title": "Azure Segment",
-            "description": "https://ohmyposh.dev/docs/az",
+            "description": "https://ohmyposh.dev/docs/segments/az",
             "properties": {
               "properties": {
                 "properties": {
                   "source": {
                     "type": "string",
                     "title": "Source",
-                    "description": "https://ohmyposh.dev/docs/az#properties",
+                    "description": "https://ohmyposh.dev/docs/segments/az#properties",
                     "default": "first_match",
                     "enum": [
                       "first_match",
@@ -1774,6 +1775,19 @@
                     "title": "Hide the root location",
                     "description": "Hides the root location, when using agnoster_short style, if it doesn't fit in the last max_depth folders.",
                     "default": false
+                  },
+                  "cycle": {
+                    "type": "array",
+                    "title": "Color overrides to use to cycle through and color the path per folder",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "cycle_folder_separator": {
+                    "type": "boolean",
+                    "title": "Cycle the folder_separator_icon",
+                    "description": "Colorize the folder_separator_icon as well when using a cycle.",
+                    "default": false
                   }
                 }
               }
@@ -1912,6 +1926,19 @@
                 }
               }
             }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "sitecore"
+              }
+            }
+          },
+          "then": {
+            "title": "Sitecore Segment",
+            "description": "https://ohmyposh.dev/docs/segments/sitecore"
           }
         },
         {
@@ -2247,13 +2274,13 @@
                     "type": "string",
                     "title": "Alternative icon",
                     "description": "Alternative icon for this activity type",
-                    "default": "\uf5a2"
+                    "default": "\uf206"
                   },
                   "run_icon": {
                     "type": "string",
                     "title": "Alternative icon",
                     "description": "Alternative icon for this activity type",
-                    "default": "\ufc0c"
+                    "default": "\ue213"
                   },
                   "skiing_icon": {
                     "type": "string",
@@ -2541,7 +2568,7 @@
           },
           "then": {
             "title": "Brewfather Batch Status",
-            "description": "https://ohmyposh.dev/docs/brewfather",
+            "description": "https://ohmyposh.dev/docs/segments/brewfather",
             "properties": {
               "properties": {
                 "properties": {
@@ -2771,17 +2798,41 @@
         {
           "if": {
             "properties": {
-              "type": { "const": "unity" }
+              "type": {
+                "const": "unity"
+              }
             }
           },
           "then": {
             "title": "Unity Segment",
-            "description": "https://ohmyposh.dev/docs/unity",
+            "description": "https://ohmyposh.dev/docs/segments/unity",
             "properties": {
               "properties": {
                 "properties": {
                   "http_timeout": {
                     "$ref": "#/definitions/http_timeout"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "upgrade"
+              }
+            }
+          },
+          "then": {
+            "title": "Upgrade Segment",
+            "description": "https://ohmyposh.dev/docs/segments/upgrade",
+            "properties": {
+              "properties": {
+                "properties": {
+                  "cache_timeout": {
+                    "$ref": "#/definitions/cache_timeout"
                   }
                 }
               }
@@ -3088,7 +3139,7 @@
           },
           "then": {
             "title": "Mercurial Segment",
-            "description": "https://ohmyposh.dev/docs/mercurial",
+            "description": "https://ohmyposh.dev/docs/segments/mercurial",
             "properties": {
               "properties": {
                 "properties": {
@@ -3115,6 +3166,11 @@
       "title": "Final Space",
       "description": "https://ohmyposh.dev/docs/configuration/overview#general-settings",
       "default": true
+    },
+    "shell_integration": {
+      "type": "boolean",
+      "title": "FTCS command marks for shell integration",
+      "default": false
     },
     "pwd": {
       "type": "string",

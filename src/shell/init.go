@@ -46,11 +46,12 @@ const (
 )
 
 var (
-	Transient bool
-	ErrorLine bool
-	Tooltips  bool
-	RPrompt   bool
-	Cursor    bool
+	Transient        bool
+	ErrorLine        bool
+	Tooltips         bool
+	ShellIntegration bool
+	RPrompt          bool
+	Cursor           bool
 )
 
 func getExecutablePath(env platform.Environment) (string, error) {
@@ -180,11 +181,12 @@ func Init(env platform.Environment) string {
 		case PWSH, PWSH5:
 			command = "(@(& %s init %s --config=%s --print%s) -join \"`n\") | Invoke-Expression"
 			config = quotePwshStr(env.Flags().Config)
+			executable = quotePwshStr(executable)
 		case ELVISH:
 			command = "eval (%s init %s --config=%s --print%s | slurp)"
-			config = quotePosixStr(env.Flags().Config)
+			config = env.Flags().Config
 		}
-		return fmt.Sprintf(command, quotePwshStr(executable), shell, config, additionalParams)
+		return fmt.Sprintf(command, executable, shell, config, additionalParams)
 	case ZSH, BASH, FISH, CMD, TCSH, XONSH:
 		return PrintInit(env)
 	case NU:
@@ -246,12 +248,8 @@ func PrintInit(env platform.Environment) string {
 		configFile = quotePosixStr(configFile)
 		script = tcshInit
 	case ELVISH:
-		executable = quotePosixStr(executable)
-		configFile = quotePosixStr(configFile)
 		script = elvishInit
 	case XONSH:
-		executable = quotePosixStr(executable)
-		configFile = quotePosixStr(configFile)
 		script = xonshInit
 	default:
 		return fmt.Sprintf("echo \"No initialization script available for %s\"", shell)
@@ -270,6 +268,7 @@ func PrintInit(env platform.Environment) string {
 		"::TRANSIENT::", toggleSetting(Transient),
 		"::ERROR_LINE::", toggleSetting(ErrorLine),
 		"::TOOLTIPS::", toggleSetting(Tooltips),
+		"::FTCS_MARKS::", toggleSetting(ShellIntegration),
 		"::RPROMPT::", strconv.FormatBool(RPrompt),
 		"::CURSOR::", strconv.FormatBool(Cursor),
 		"::UPGRADE::", strconv.FormatBool(hasNotice),

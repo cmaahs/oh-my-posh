@@ -24,7 +24,6 @@ import (
 	"github.com/jandedobbeleer/oh-my-posh/src/platform/cmd"
 	"github.com/jandedobbeleer/oh-my-posh/src/regex"
 
-	cpu "github.com/shirou/gopsutil/v3/cpu"
 	disk "github.com/shirou/gopsutil/v3/disk"
 	load "github.com/shirou/gopsutil/v3/load"
 	process "github.com/shirou/gopsutil/v3/process"
@@ -68,10 +67,12 @@ type Flags struct {
 	Manual        bool
 	Plain         bool
 	Primary       bool
+	HasTransient  bool
 	PromptCount   int
 	Cleared       bool
 	Version       string
 	TrueColor     bool
+	NoExitCode    bool
 }
 
 type CommandError struct {
@@ -157,9 +158,6 @@ type Memory struct {
 type SystemInfo struct {
 	// mem
 	Memory
-	// cpu
-	Times float64
-	CPU   []cpu.InfoStat
 	// load
 	Load1  float64
 	Load5  float64
@@ -192,6 +190,7 @@ type TemplateCache struct {
 	SHLVL        int
 	Segments     SegmentsCache
 
+	initialized bool
 	sync.RWMutex
 }
 
@@ -314,6 +313,7 @@ func (env *Shell) Init() {
 	env.cmdCache = &commandCache{
 		commands: NewConcurrentMap(),
 	}
+	env.tmplCache = &TemplateCache{}
 	env.SetPromptCount()
 }
 
@@ -688,7 +688,7 @@ func (env *Shell) HTTPRequest(targetURL string, body io.Reader, timeout int, req
 		dump, _ := httputil.DumpRequestOut(request, true)
 		env.Debug(string(dump))
 	}
-	response, err := client.Do(request)
+	response, err := Client.Do(request)
 	if err != nil {
 		env.Error(err)
 		return nil, env.unWrapError(err)
@@ -747,12 +747,22 @@ func (env *Shell) Cache() Cache {
 	return env.fileCache
 }
 
-func (env *Shell) Close() {
-	defer env.Trace(time.Now())
+func (env *Shell) saveTemplateCache() {
+	// only store this when in a primary prompt
+	// and when we have a transient prompt in the config
+	canSave := env.CmdFlags.Primary && env.CmdFlags.HasTransient
+	if !canSave {
+		return
+	}
 	templateCache, err := json.Marshal(env.TemplateCache())
 	if err == nil {
 		env.fileCache.Set(TEMPLATECACHE, string(templateCache), 1440)
 	}
+}
+
+func (env *Shell) Close() {
+	defer env.Trace(time.Now())
+	env.saveTemplateCache()
 	env.fileCache.Close()
 }
 
@@ -768,6 +778,7 @@ func (env *Shell) LoadTemplateCache() {
 		env.Error(err)
 		return
 	}
+	templateCache.initialized = true
 	env.tmplCache = &templateCache
 }
 
@@ -777,19 +788,21 @@ func (env *Shell) Logs() string {
 
 func (env *Shell) TemplateCache() *TemplateCache {
 	defer env.Trace(time.Now())
-	if env.tmplCache != nil {
-		return env.tmplCache
+	tmplCache := env.tmplCache
+	tmplCache.Lock()
+	defer tmplCache.Unlock()
+
+	if tmplCache.initialized {
+		return tmplCache
 	}
 
-	tmplCache := &TemplateCache{
-		Root:         env.Root(),
-		Shell:        env.Shell(),
-		ShellVersion: env.CmdFlags.ShellVersion,
-		Code:         env.ErrorCode(),
-		WSL:          env.IsWsl(),
-		Segments:     make(map[string]interface{}),
-		PromptCount:  env.CmdFlags.PromptCount,
-	}
+	tmplCache.Root = env.Root()
+	tmplCache.Shell = env.Shell()
+	tmplCache.ShellVersion = env.CmdFlags.ShellVersion
+	tmplCache.Code = env.ErrorCode()
+	tmplCache.WSL = env.IsWsl()
+	tmplCache.Segments = make(map[string]interface{})
+	tmplCache.PromptCount = env.CmdFlags.PromptCount
 	tmplCache.Env = make(map[string]string)
 	tmplCache.Var = make(map[string]interface{})
 
@@ -830,7 +843,7 @@ func (env *Shell) TemplateCache() *TemplateCache {
 		tmplCache.SHLVL = shlvl
 	}
 
-	env.tmplCache = tmplCache
+	tmplCache.initialized = true
 	return tmplCache
 }
 
@@ -921,16 +934,6 @@ func (env *Shell) SystemInfo() (*SystemInfo, error) {
 		s.Load1 = loadStat.Load1
 		s.Load5 = loadStat.Load5
 		s.Load15 = loadStat.Load15
-	}
-
-	processorTimes, err := cpu.Percent(0, false)
-	if err == nil && len(processorTimes) > 0 {
-		s.Times = processorTimes[0]
-	}
-
-	processors, err := cpu.Info()
-	if err == nil {
-		s.CPU = processors
 	}
 
 	diskIO, err := disk.IOCounters()

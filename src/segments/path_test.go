@@ -14,7 +14,7 @@ import (
 	mock2 "github.com/stretchr/testify/mock"
 )
 
-func renderTemplate(env *mock.MockedEnvironment, segmentTemplate string, context interface{}) string {
+func renderTemplateNoTrimSpace(env *mock.MockedEnvironment, segmentTemplate string, context interface{}) string {
 	found := false
 	for _, call := range env.Mock.ExpectedCalls {
 		if call.Method == "TemplateCache" {
@@ -38,7 +38,11 @@ func renderTemplate(env *mock.MockedEnvironment, segmentTemplate string, context
 	if err != nil {
 		return err.Error()
 	}
-	return strings.TrimSpace(text)
+	return text
+}
+
+func renderTemplate(env *mock.MockedEnvironment, segmentTemplate string, context interface{}) string {
+	return strings.TrimSpace(renderTemplateNoTrimSpace(env, segmentTemplate, context))
 }
 
 const (
@@ -198,6 +202,14 @@ func TestAgnosterPathStyles(t *testing.T) {
 			PathSeparator:       "\\",
 			FolderSeparatorIcon: " > ",
 		},
+		{
+			Style:               Unique,
+			Expected:            "a",
+			HomePath:            homeDir,
+			Pwd:                 "/ab",
+			PathSeparator:       "/",
+			FolderSeparatorIcon: " > ",
+		},
 
 		{
 			Style:               Powerlevel,
@@ -325,7 +337,7 @@ func TestAgnosterPathStyles(t *testing.T) {
 		},
 		{
 			Style:               Letter,
-			Expected:            "C:\\",
+			Expected:            "C: > ",
 			HomePath:            homeDirWindows,
 			Pwd:                 "C:\\",
 			GOOS:                platform.WINDOWS,
@@ -348,6 +360,14 @@ func TestAgnosterPathStyles(t *testing.T) {
 			Pwd:                 homeDirWindows + "\\something\\man",
 			GOOS:                platform.WINDOWS,
 			PathSeparator:       "\\",
+			FolderSeparatorIcon: " > ",
+		},
+		{
+			Style:               Letter,
+			Expected:            "w",
+			HomePath:            homeDir,
+			Pwd:                 "/whatever",
+			PathSeparator:       "/",
 			FolderSeparatorIcon: " > ",
 		},
 
@@ -594,7 +614,7 @@ func TestAgnosterPathStyles(t *testing.T) {
 		},
 		{
 			Style:               AgnosterShort,
-			Expected:            "C:/",
+			Expected:            "C: | ",
 			HomePath:            homeDir,
 			Pwd:                 "/mnt/c",
 			Pswd:                "C:",
@@ -625,7 +645,7 @@ func TestAgnosterPathStyles(t *testing.T) {
 		},
 		{
 			Style:               AgnosterShort,
-			Expected:            "C:\\",
+			Expected:            "C: > ",
 			HomePath:            homeDirWindows,
 			Pwd:                 "C:",
 			GOOS:                platform.WINDOWS,
@@ -731,7 +751,7 @@ func TestAgnosterPathStyles(t *testing.T) {
 		}
 		path.setPaths()
 		path.setStyle()
-		got := renderTemplate(env, "{{ .Path }}", path)
+		got := renderTemplateNoTrimSpace(env, "{{ .Path }}", path)
 		assert.Equal(t, tc.Expected, got)
 	}
 }
@@ -861,7 +881,7 @@ func TestFullAndFolderPath(t *testing.T) {
 		}
 		path.setPaths()
 		path.setStyle()
-		got := renderTemplate(env, tc.Template, path)
+		got := renderTemplateNoTrimSpace(env, tc.Template, path)
 		assert.Equal(t, tc.Expected, got)
 	}
 }
@@ -916,7 +936,7 @@ func TestFullPathCustomMappedLocations(t *testing.T) {
 		}
 		path.setPaths()
 		path.setStyle()
-		got := renderTemplate(env, "{{ .Path }}", path)
+		got := renderTemplateNoTrimSpace(env, "{{ .Path }}", path)
 		assert.Equal(t, tc.Expected, got)
 	}
 }
@@ -944,18 +964,20 @@ func TestFolderPathCustomMappedLocations(t *testing.T) {
 	}
 	path.setPaths()
 	path.setStyle()
-	got := renderTemplate(env, "{{ .Path }}", path)
+	got := renderTemplateNoTrimSpace(env, "{{ .Path }}", path)
 	assert.Equal(t, "#", got)
 }
 
 func TestAgnosterPath(t *testing.T) {
 	cases := []struct {
-		Case          string
-		Expected      string
-		Home          string
-		PWD           string
-		GOOS          string
-		PathSeparator string
+		Case           string
+		Expected       string
+		Home           string
+		PWD            string
+		GOOS           string
+		PathSeparator  string
+		Cycle          []string
+		ColorSeparator bool
 	}{
 		{
 			Case:          "Windows registry drive case sensitive",
@@ -1073,9 +1095,33 @@ func TestAgnosterPath(t *testing.T) {
 			PWD:           "/mnt/folder/location",
 			PathSeparator: "/",
 		},
+		{
+			Case:          "Unix, colorize",
+			Expected:      "<blue>mnt</> > <yellow>f</> > <blue>location</>",
+			Home:          homeDir,
+			PWD:           "/mnt/folder/location",
+			PathSeparator: "/",
+			Cycle:         []string{"blue", "yellow"},
+		},
+		{
+			Case:           "Unix, colorize with folder separator",
+			Expected:       "<blue>mnt</><yellow> > </><yellow>f</><blue> > </><blue>location</>",
+			Home:           homeDir,
+			PWD:            "/mnt/folder/location",
+			PathSeparator:  "/",
+			Cycle:          []string{"blue", "yellow"},
+			ColorSeparator: true,
+		},
+		{
+			Case:          "Unix one level",
+			Expected:      "mnt",
+			Home:          homeDir,
+			PWD:           "/mnt",
+			PathSeparator: "/",
+		},
 	}
 
-	for _, tc := range cases { //nolint:dupl
+	for _, tc := range cases {
 		env := new(mock.MockedEnvironment)
 		env.On("Home").Return(tc.Home)
 		env.On("PathSeparator").Return(tc.PathSeparator)
@@ -1089,15 +1135,17 @@ func TestAgnosterPath(t *testing.T) {
 		path := &Path{
 			env: env,
 			props: properties.Map{
-				properties.Style:    Agnoster,
-				FolderSeparatorIcon: " > ",
-				FolderIcon:          "f",
-				HomeIcon:            "~",
+				properties.Style:     Agnoster,
+				FolderSeparatorIcon:  " > ",
+				FolderIcon:           "f",
+				HomeIcon:             "~",
+				Cycle:                tc.Cycle,
+				CycleFolderSeparator: tc.ColorSeparator,
 			},
 		}
 		path.setPaths()
 		path.setStyle()
-		got := renderTemplate(env, "{{ .Path }}", path)
+		got := renderTemplateNoTrimSpace(env, "{{ .Path }}", path)
 		assert.Equal(t, tc.Expected, got, tc.Case)
 	}
 }
@@ -1229,7 +1277,7 @@ func TestAgnosterLeftPath(t *testing.T) {
 		},
 	}
 
-	for _, tc := range cases { //nolint:dupl
+	for _, tc := range cases {
 		env := new(mock.MockedEnvironment)
 		env.On("Home").Return(tc.Home)
 		env.On("PathSeparator").Return(tc.PathSeparator)
@@ -1251,7 +1299,7 @@ func TestAgnosterLeftPath(t *testing.T) {
 		}
 		path.setPaths()
 		path.setStyle()
-		got := renderTemplate(env, "{{ .Path }}", path)
+		got := renderTemplateNoTrimSpace(env, "{{ .Path }}", path)
 		assert.Equal(t, tc.Expected, got, tc.Case)
 	}
 }

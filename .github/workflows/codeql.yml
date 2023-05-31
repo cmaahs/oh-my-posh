@@ -20,16 +20,16 @@ jobs:
         working-directory: ${{ github.workspace }}/src
     steps:
     - name: Install Go
-      uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9
+      uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753
       with:
         go-version: 1.20.2
     - name: Checkout code
       uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@7df0ce34898d659f95c0c4a09eaa8d4e32ee64db
+      uses: github/codeql-action/init@0225834cc549ee0ca93cb085b92954821a145866
       with:
         languages: go
     - name: Autobuild
-      uses: github/codeql-action/autobuild@7df0ce34898d659f95c0c4a09eaa8d4e32ee64db
+      uses: github/codeql-action/autobuild@0225834cc549ee0ca93cb085b92954821a145866
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@7df0ce34898d659f95c0c4a09eaa8d4e32ee64db
+      uses: github/codeql-action/analyze@0225834cc549ee0ca93cb085b92954821a145866
