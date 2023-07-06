@@ -28,7 +28,9 @@ To see the icons displayed in Oh My Posh, **install** a [Nerd Font][nerdfonts], 
 Oh My Posh has a CLI to help you select and install a [Nerd Font][nerdfonts] (beta):
 
 :::caution Windows
-This command needs to be executed as admin. The fonts are installed system wide.
+This command is best executed as admin so that fonts are installed system wide.
+In case you have no admin rights, you can install the fonts by adding the `--user` flag.
+Do know this can have side-effects when using certain applications.
 :::
 
 ```bash
@@ -81,7 +83,7 @@ by modifying the Windows Terminal settings (default shortcut: `CTRL + SHIFT + ,`
         {
             "font":
             {
-                "face": "MesloLGM NF"
+                "face": "MesloLGM Nerd Font"
             }
         }
     }
@@ -93,10 +95,10 @@ by modifying the Windows Terminal settings (default shortcut: `CTRL + SHIFT + ,`
 
 When using Visual Studio Code, you will need to configure the integrated Terminal to make use of the Nerd Font as well. This can be done by changing the `Integrated: Font Family` value in the Terminal settings (default shortcut: `CTRL + ,` and search for `Integrated: Font Family` or via `Users` -> `Features` -> `Terminal`).
 
-If you are using the JSON based settings, you will need to update the `terminal.integrated.fontFamily` value. Example in case of `MesloLGM NF` Nerd Font:
+If you are using the JSON based settings, you will need to update the `terminal.integrated.fontFamily` value. Example in case of `MesloLGM Nerd Font` Nerd Font:
 
 ```json
-"terminal.integrated.fontFamily": "MesloLGM NF"
+"terminal.integrated.fontFamily": "MesloLGM Nerd Font"
 ```
 
 </TabItem>
@@ -110,7 +112,7 @@ The `minimal` themes do not make use of Nerd Font icons.
 [Creating your own theme][configuration] is always an option too 😊
 
 [nerdfonts]: https://www.nerdfonts.com/
-[meslo]: https://github.com/ryanoasis/nerd-fonts/releases/download/v2.1.0/Meslo.zip
+[meslo]: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.0.2/Meslo.zip
 [themes]: https://github.com/JanDeDobbeleer/oh-my-posh/tree/main/themes
 [font-thread]: https://github.com/JanDeDobbeleer/oh-my-posh/issues/145#issuecomment-730162622
 [configuration]: /docs/configuration/overview

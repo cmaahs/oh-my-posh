@@ -77,6 +77,10 @@ const (
 	Cycle properties.Property = "cycle"
 	// Color the path separators within the cycle
 	CycleFolderSeparator properties.Property = "cycle_folder_separator"
+	// format to use on the folder names
+	FolderFormat properties.Property = "folder_format"
+	// format to use on the first and last folder of the path
+	EdgeFormat properties.Property = "edge_format"
 )
 
 func (pt *Path) Template() string {
@@ -520,9 +524,10 @@ func (pt *Path) normalizePath(path string) string {
 }
 
 // ParsePath parses an input path and returns a clean root and a clean path.
-func (pt *Path) parsePath(inputPath string) (root, path string) {
+func (pt *Path) parsePath(inputPath string) (string, string) {
+	var root, path string
 	if len(inputPath) == 0 {
-		return
+		return root, path
 	}
 	separator := pt.env.PathSeparator()
 	clean := func(path string) string {
@@ -545,7 +550,7 @@ func (pt *Path) parsePath(inputPath string) (root, path string) {
 		if len(matches) > 0 {
 			root = `\\` + matches["hostname"] + `\` + matches["sharename"]
 			path = clean(matches["path"])
-			return
+			return root, path
 		}
 	}
 	s := strings.SplitAfterN(inputPath, separator, 2)
@@ -590,6 +595,8 @@ func (pt *Path) colorizePath(root string, elements []string) string {
 	skipColorize := len(cycle) == 0
 	folderSeparator := pt.getFolderSeparator()
 	colorSeparator := pt.props.GetBool(CycleFolderSeparator, false)
+	folderFormat := pt.props.GetString(FolderFormat, "%s")
+	edgeFormat := pt.props.GetString(EdgeFormat, folderFormat)
 
 	colorizeElement := func(element string) string {
 		if skipColorize || len(element) == 0 {
@@ -602,6 +609,7 @@ func (pt *Path) colorizePath(root string, elements []string) string {
 	}
 
 	if len(elements) == 0 {
+		root := fmt.Sprintf(edgeFormat, root)
 		return colorizeElement(root)
 	}
 
@@ -614,6 +622,7 @@ func (pt *Path) colorizePath(root string, elements []string) string {
 
 	var builder strings.Builder
 
+	root = fmt.Sprintf(edgeFormat, root)
 	builder.WriteString(colorizeElement(root))
 
 	if root != pt.env.PathSeparator() && len(root) != 0 {
@@ -624,6 +633,13 @@ func (pt *Path) colorizePath(root string, elements []string) string {
 		if len(element) == 0 {
 			continue
 		}
+
+		format := folderFormat
+		if i == len(elements)-1 {
+			format = edgeFormat
+		}
+
+		element = fmt.Sprintf(format, element)
 		builder.WriteString(colorizeElement(element))
 		if i != len(elements)-1 {
 			builder.WriteString(colorizeSeparator())

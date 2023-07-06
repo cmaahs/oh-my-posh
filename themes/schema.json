@@ -102,6 +102,12 @@
       "description": "Template that creates the URL of the version info / release notes",
       "default": ""
     },
+    "status_formats": {
+      "type": "object",
+      "title": "Status string formats",
+      "description": "Override the status format for a specific change. Example: {\"Added\": \"Added: %d\"}",
+      "default": {}
+    },
     "extra_prompt": {
       "type": "object",
       "default": {},
@@ -292,6 +298,7 @@
             "r",
             "sapling",
             "session",
+            "sitecore",
             "spotify",
             "shell",
             "sysinfo",
@@ -1007,6 +1014,15 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "fetch_user": {
+                    "type": "boolean",
+                    "title": "Fetch the user",
+                    "description": "Fetch the current configured user for the repository",
+                    "default": false
+                  },
+                  "status_formats": {
+                    "$ref": "#/definitions/status_formats"
                   }
                 }
               }
@@ -1788,6 +1804,18 @@
                     "title": "Cycle the folder_separator_icon",
                     "description": "Colorize the folder_separator_icon as well when using a cycle.",
                     "default": false
+                  },
+                  "folder_format": {
+                    "type": "string",
+                    "title": "The folder format",
+                    "description": "Golang string format to apply to the folder name",
+                    "pattern": ".*%s.*"
+                  },
+                  "edge_format": {
+                    "type": "string",
+                    "title": "The format to use on the start and end folder",
+                    "description": "Golang string format to apply to the start and end folder",
+                    "pattern": ".*%s.*"
                   }
                 }
               }
@@ -1872,6 +1900,9 @@
                     "title": "Display Status",
                     "description": "Display the local changes or not",
                     "default": true
+                  },
+                  "status_formats": {
+                    "$ref": "#/definitions/status_formats"
                   }
                 }
               }
@@ -1938,7 +1969,19 @@
           },
           "then": {
             "title": "Sitecore Segment",
-            "description": "https://ohmyposh.dev/docs/segments/sitecore"
+            "description": "https://ohmyposh.dev/docs/segments/sitecore",
+            "properties": {
+              "properties": {
+                "properties": {
+                  "display_default": {
+                    "type": "boolean",
+                    "title": "Display Default",
+                    "description": "Display the segment or not when the Sitecore environment name matches `default`",
+                    "default": true
+                  }
+                }
+              }
+            }
           }
         },
         {
@@ -2216,7 +2259,8 @@
                       "galvestonms",
                       "houston",
                       "amarillo",
-                      "round"
+                      "round",
+                      "lucky7"
                     ],
                     "default": "austin"
                   }
@@ -2339,6 +2383,9 @@
                     "title": "Display Status",
                     "description": "Display the local changes or not",
                     "default": true
+                  },
+                  "status_formats": {
+                    "$ref": "#/definitions/status_formats"
                   }
                 }
               }
@@ -2552,6 +2599,9 @@
                     "title": "Full branch path",
                     "description": "display the full branch path instead of only the branch name",
                     "default": false
+                  },
+                  "status_formats": {
+                    "$ref": "#/definitions/status_formats"
                   }
                 }
               }
@@ -3148,6 +3198,9 @@
                     "title": "Display Status",
                     "description": "Display the local changes or not",
                     "default": true
+                  },
+                  "status_formats": {
+                    "$ref": "#/definitions/status_formats"
                   }
                 }
               }

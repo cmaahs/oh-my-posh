@@ -10,12 +10,12 @@ import (
 	"strings"
 )
 
-func InstallZIP(data []byte) (err error) {
+func InstallZIP(data []byte, user bool) error {
 	bytesReader := bytes.NewReader(data)
 
 	zipReader, err := zip.NewReader(bytesReader, int64(bytesReader.Len()))
 	if err != nil {
-		return
+		return err
 	}
 
 	fonts := make(map[string]*Font)
@@ -50,7 +50,7 @@ func InstallZIP(data []byte) (err error) {
 	}
 
 	for _, font := range fonts {
-		if err = install(font); err != nil {
+		if err = install(font, user); err != nil {
 			return err
 		}
 	}
