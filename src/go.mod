@@ -12,21 +12,21 @@ require (
 	github.com/fogleman/gg v1.3.0
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/google/uuid v1.3.0 // indirect
-	github.com/gookit/color v1.5.3
+	github.com/gookit/color v1.5.4
 	github.com/gookit/config/v2 v2.2.3
 	github.com/gookit/goutil v0.6.10 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/sergi/go-diff v1.3.1 // indirect
-	github.com/shirou/gopsutil/v3 v3.23.6
+	github.com/shirou/gopsutil/v3 v3.23.7
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/stretchr/testify v1.8.4
 	github.com/wayneashleyberry/terminal-dimensions v1.1.0
 	golang.org/x/crypto v0.8.0 // indirect
-	golang.org/x/image v0.9.0
-	golang.org/x/sys v0.10.0
-	golang.org/x/text v0.11.0
+	golang.org/x/image v0.11.0
+	golang.org/x/sys v0.11.0
+	golang.org/x/text v0.12.0
 	gopkg.in/ini.v1 v1.67.0
 )
 
@@ -34,12 +34,12 @@ require (
 	github.com/ConradIrwin/font v0.0.0-20210318200717-ce8d41cc0732
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.2
-	github.com/charmbracelet/lipgloss v0.7.1
+	github.com/charmbracelet/lipgloss v0.8.0
 	github.com/go-git/go-git/v5 v5.5.2
 	github.com/hashicorp/hcl/v2 v2.17.0
 	github.com/integralist/go-findroot v0.0.0-20160518114804-ac90681525dc
 	github.com/maahsome/gitlab-go v0.1.15
-	github.com/mattn/go-runewidth v0.0.14
+	github.com/mattn/go-runewidth v0.0.15
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/whilp/git-urls v1.0.0
@@ -95,7 +95,7 @@ require (
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
-	github.com/muesli/termenv v0.15.1 // indirect
+	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/nwidger/jsoncolor v0.3.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pjbgf/sha1cd v0.2.3 // indirect

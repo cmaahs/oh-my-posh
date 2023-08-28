@@ -10,6 +10,7 @@ import (
 	"github.com/jandedobbeleer/oh-my-posh/src/shell"
 
 	"github.com/stretchr/testify/assert"
+	mock2 "github.com/stretchr/testify/mock"
 )
 
 func TestCanWriteRPrompt(t *testing.T) {
@@ -21,7 +22,7 @@ func TestCanWriteRPrompt(t *testing.T) {
 		PromptLength       int
 		RPromptLength      int
 	}{
-		{Case: "Width Error", Expected: true, TerminalWidthError: errors.New("burp")},
+		{Case: "Width Error", Expected: false, TerminalWidthError: errors.New("burp")},
 		{Case: "Terminal > Prompt enabled", Expected: true, TerminalWidth: 200, PromptLength: 100, RPromptLength: 10},
 		{Case: "Terminal > Prompt enabled edge", Expected: true, TerminalWidth: 200, PromptLength: 100, RPromptLength: 70},
 		{Case: "Prompt > Terminal enabled", Expected: true, TerminalWidth: 200, PromptLength: 300, RPromptLength: 70},
@@ -39,7 +40,7 @@ func TestCanWriteRPrompt(t *testing.T) {
 			currentLineLength: tc.PromptLength,
 			rprompt:           "hello",
 		}
-		got := engine.canWriteRightBlock(true)
+		_, got := engine.canWriteRightBlock(true)
 		assert.Equal(t, tc.Expected, got, tc.Case)
 	}
 }
@@ -66,6 +67,7 @@ func TestPrintPWD(t *testing.T) {
 		env.On("Shell").Return("shell")
 		env.On("User").Return("user")
 		env.On("Host").Return("host", nil)
+		env.On("DebugF", mock2.Anything, mock2.Anything).Return(nil)
 		env.On("TemplateCache").Return(&platform.TemplateCache{
 			Env:   make(map[string]string),
 			Shell: "shell",
@@ -163,6 +165,7 @@ func TestGetTitle(t *testing.T) {
 		env.On("Pwd").Return(tc.Cwd)
 		env.On("Home").Return("/usr/home")
 		env.On("PathSeparator").Return(tc.PathSeparator)
+		env.On("DebugF", mock2.Anything, mock2.Anything).Return(nil)
 		env.On("TemplateCache").Return(&platform.TemplateCache{
 			Env: map[string]string{
 				"USERDOMAIN": "MyCompany",
@@ -223,6 +226,7 @@ func TestGetConsoleTitleIfGethostnameReturnsError(t *testing.T) {
 		env := new(mock.MockedEnvironment)
 		env.On("Pwd").Return(tc.Cwd)
 		env.On("Home").Return("/usr/home")
+		env.On("DebugF", mock2.Anything, mock2.Anything).Return(nil)
 		env.On("TemplateCache").Return(&platform.TemplateCache{
 			Env: map[string]string{
 				"USERDOMAIN": "MyCompany",

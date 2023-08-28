@@ -87,21 +87,27 @@ func (env *Shell) IsWsl2() bool {
 
 func (env *Shell) TerminalWidth() (int, error) {
 	defer env.Trace(time.Now())
-	if env.CmdFlags.TerminalWidth != 0 {
+
+	if env.CmdFlags.TerminalWidth > 0 {
+		env.DebugF("terminal width: %d", env.CmdFlags.TerminalWidth)
 		return env.CmdFlags.TerminalWidth, nil
 	}
+
 	handle, err := syscall.Open("CONOUT$", syscall.O_RDWR, 0)
 	if err != nil {
 		env.Error(err)
 		return 0, err
 	}
+
 	info, err := winterm.GetConsoleScreenBufferInfo(uintptr(handle))
 	if err != nil {
 		env.Error(err)
 		return 0, err
 	}
-	// return int(float64(info.Size.X) * 0.57), nil
-	return int(info.Size.X), nil
+
+	env.CmdFlags.TerminalWidth = int(info.Size.X)
+	env.DebugF("terminal width: %d", env.CmdFlags.TerminalWidth)
+	return env.CmdFlags.TerminalWidth, nil
 }
 
 func (env *Shell) Platform() string {
@@ -148,9 +154,12 @@ func (env *Shell) WindowsRegistryKeyValue(path string) (*WindowsRegistryValue, e
 		return nil, err
 	}
 
-	regKey := Base(env, regPath)
-	if len(regKey) != 0 {
-		regPath = strings.TrimSuffix(regPath, `\`+regKey)
+	var regKey string
+	if !strings.HasSuffix(regPath, `\`) {
+		regKey = Base(env, regPath)
+		if len(regKey) != 0 {
+			regPath = strings.TrimSuffix(regPath, `\`+regKey)
+		}
 	}
 
 	var key registry.Key

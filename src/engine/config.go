@@ -34,24 +34,26 @@ const (
 
 // Config holds all the theme for rendering the prompt
 type Config struct {
-	Version              int                    `json:"version"`
-	FinalSpace           bool                   `json:"final_space,omitempty"`
-	ConsoleTitleTemplate string                 `json:"console_title_template,omitempty"`
-	TerminalBackground   string                 `json:"terminal_background,omitempty"`
-	AccentColor          string                 `json:"accent_color,omitempty"`
-	Blocks               []*Block               `json:"blocks,omitempty"`
-	Tooltips             []*Segment             `json:"tooltips,omitempty"`
-	TransientPrompt      *Segment               `json:"transient_prompt,omitempty"`
-	ValidLine            *Segment               `json:"valid_line,omitempty"`
-	ErrorLine            *Segment               `json:"error_line,omitempty"`
-	SecondaryPrompt      *Segment               `json:"secondary_prompt,omitempty"`
-	DebugPrompt          *Segment               `json:"debug_prompt,omitempty"`
-	Palette              ansi.Palette           `json:"palette,omitempty"`
-	Palettes             *ansi.Palettes         `json:"palettes,omitempty"`
-	Cycle                ansi.Cycle             `json:"cycle,omitempty"`
-	ShellIntegration     bool                   `json:"shell_integration,omitempty"`
-	PWD                  string                 `json:"pwd,omitempty"`
-	Var                  map[string]interface{} `json:"var,omitempty"`
+	Version                  int                    `json:"version"`
+	FinalSpace               bool                   `json:"final_space,omitempty"`
+	ConsoleTitleTemplate     string                 `json:"console_title_template,omitempty"`
+	TerminalBackground       string                 `json:"terminal_background,omitempty"`
+	AccentColor              string                 `json:"accent_color,omitempty"`
+	Blocks                   []*Block               `json:"blocks,omitempty"`
+	Tooltips                 []*Segment             `json:"tooltips,omitempty"`
+	TransientPrompt          *Segment               `json:"transient_prompt,omitempty"`
+	ValidLine                *Segment               `json:"valid_line,omitempty"`
+	ErrorLine                *Segment               `json:"error_line,omitempty"`
+	SecondaryPrompt          *Segment               `json:"secondary_prompt,omitempty"`
+	DebugPrompt              *Segment               `json:"debug_prompt,omitempty"`
+	Palette                  ansi.Palette           `json:"palette,omitempty"`
+	Palettes                 *ansi.Palettes         `json:"palettes,omitempty"`
+	Cycle                    ansi.Cycle             `json:"cycle,omitempty"`
+	ShellIntegration         bool                   `json:"shell_integration,omitempty"`
+	PWD                      string                 `json:"pwd,omitempty"`
+	Var                      map[string]interface{} `json:"var,omitempty"`
+	DisableCursorPositioning bool                   `json:"disable_cursor_positioning,omitempty"`
+	PatchPwshBleed           bool                   `json:"patch_pwsh_bleed,omitempty"`
 
 	// Deprecated
 	OSC99 bool `json:"osc99,omitempty"`
@@ -132,12 +134,17 @@ func loadConfig(env platform.Environment) *Config {
 	cfg.origin = configFile
 	cfg.Format = strings.TrimPrefix(filepath.Ext(configFile), ".")
 	cfg.env = env
-	if cfg.Format == "yml" {
+
+	// support different extensions
+	switch cfg.Format {
+	case "yml":
 		cfg.Format = YAML
+	case "jsonc":
+		cfg.Format = JSON
 	}
 
-	config.AddDriver(yaml.Driver)
-	config.AddDriver(json.Driver)
+	config.AddDriver(yaml.Driver.WithAliases("yaml", "yml"))
+	config.AddDriver(json.Driver.WithAliases("json", "jsonc"))
 	config.AddDriver(toml.Driver)
 
 	if config.Default().IsEmpty() {
@@ -508,7 +515,7 @@ func defaultConfig(env platform.Environment, warning bool) *Config {
 				TrailingDiamond: "\ue0b4",
 				Background:      "p:blue",
 				Foreground:      "p:white",
-				Template:        " \ufd03 {{ .Name }} ",
+				Template:        " \uebd8 {{ .Name }} ",
 				Properties: properties.Map{
 					properties.DisplayDefault: true,
 				},

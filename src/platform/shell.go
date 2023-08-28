@@ -3,6 +3,7 @@ package platform
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -52,6 +53,7 @@ var (
 
 type Flags struct {
 	ErrorCode     int
+	PipeStatus    string
 	Config        string
 	Shell         string
 	ShellVersion  string
@@ -72,6 +74,7 @@ type Flags struct {
 	Cleared       bool
 	TrueColor     bool
 	NoExitCode    bool
+	Column        int
 }
 
 type CommandError struct {
@@ -165,44 +168,34 @@ type SystemInfo struct {
 	Disks map[string]disk.IOCountersStat
 }
 
-type SegmentsCache map[string]interface{}
-
-func (s *SegmentsCache) Contains(key string) bool {
-	_, ok := (*s)[key]
-	return ok
-}
-
 type TemplateCache struct {
-	Root         bool
-	PWD          string
-	Folder       string
-	Shell        string
-	ShellVersion string
-	UserName     string
-	HostName     string
-	Code         int
-	Env          map[string]string
-	Var          map[string]interface{}
-	OS           string
-	WSL          bool
-	PromptCount  int
-	SHLVL        int
-	Segments     SegmentsCache
+	Root          bool
+	PWD           string
+	Folder        string
+	Shell         string
+	ShellVersion  string
+	UserName      string
+	HostName      string
+	Code          int
+	Env           map[string]string
+	Var           SimpleMap
+	OS            string
+	WSL           bool
+	PromptCount   int
+	SHLVL         int
+	Segments      *ConcurrentMap
+	SegmentsCache SimpleMap
 
 	initialized bool
 	sync.RWMutex
 }
 
 func (t *TemplateCache) AddSegmentData(key string, value interface{}) {
-	t.Lock()
-	t.Segments[key] = value
-	t.Unlock()
+	t.Segments.Set(key, value)
 }
 
 func (t *TemplateCache) RemoveSegmentData(key string) {
-	t.Lock()
-	delete(t.Segments, key)
-	t.Unlock()
+	t.Segments.Delete(key)
 }
 
 type Environment interface {
@@ -215,7 +208,7 @@ type Environment interface {
 	GOOS() string
 	Shell() string
 	Platform() string
-	ErrorCode() int
+	StatusCodes() (int, string)
 	PathSeparator() string
 	HasFiles(pattern string) bool
 	HasFilesInDir(dir, pattern string) bool
@@ -279,7 +272,7 @@ func (c *commandCache) get(command string) (string, bool) {
 
 type Shell struct {
 	CmdFlags *Flags
-	Var      map[string]interface{}
+	Var      SimpleMap
 
 	cwd       string
 	cmdCache  *commandCache
@@ -353,7 +346,9 @@ func (env *Shell) resolveConfigPath() {
 func (env *Shell) downloadConfig(location string) error {
 	defer env.Trace(time.Now(), location)
 	ext := filepath.Ext(location)
-	configPath := filepath.Join(env.CachePath(), "config.omp"+ext)
+	fileHash := base64.StdEncoding.EncodeToString([]byte(location))
+	filename := fmt.Sprintf("config.%s.omp%s", fileHash, ext)
+	configPath := filepath.Join(env.CachePath(), filename)
 	cfg, err := env.HTTPRequest(location, nil, 5000)
 	if err != nil {
 		return err
@@ -611,9 +606,9 @@ func (env *Shell) HasCommand(command string) bool {
 	return false
 }
 
-func (env *Shell) ErrorCode() int {
+func (env *Shell) StatusCodes() (int, string) {
 	defer env.Trace(time.Now())
-	return env.CmdFlags.ErrorCode
+	return env.CmdFlags.ErrorCode, env.CmdFlags.PipeStatus
 }
 
 func (env *Shell) ExecutionTime() float64 {
@@ -631,9 +626,10 @@ func (env *Shell) Flags() *Flags {
 
 func (env *Shell) Shell() string {
 	defer env.Trace(time.Now())
-	if env.CmdFlags.Shell != "" {
+	if len(env.CmdFlags.Shell) != 0 {
 		return env.CmdFlags.Shell
 	}
+	env.Debug("no shell name provided in flags, trying to detect it")
 	pid := os.Getppid()
 	p, _ := process.NewProcess(int32(pid))
 	name, err := p.Name()
@@ -753,7 +749,9 @@ func (env *Shell) saveTemplateCache() {
 	if !canSave {
 		return
 	}
-	templateCache, err := json.Marshal(env.TemplateCache())
+	cache := env.TemplateCache()
+	cache.SegmentsCache = cache.Segments.SimpleMap()
+	templateCache, err := json.Marshal(cache)
 	if err == nil {
 		env.fileCache.Set(TEMPLATECACHE, string(templateCache), 1440)
 	}
@@ -771,14 +769,15 @@ func (env *Shell) LoadTemplateCache() {
 	if !OK {
 		return
 	}
-	var templateCache TemplateCache
-	err := json.Unmarshal([]byte(val), &templateCache)
+	var tmplCache TemplateCache
+	err := json.Unmarshal([]byte(val), &tmplCache)
 	if err != nil {
 		env.Error(err)
 		return
 	}
-	templateCache.initialized = true
-	env.tmplCache = &templateCache
+	tmplCache.Segments = tmplCache.SegmentsCache.ConcurrentMap()
+	tmplCache.initialized = true
+	env.tmplCache = &tmplCache
 }
 
 func (env *Shell) Logs() string {
@@ -798,9 +797,9 @@ func (env *Shell) TemplateCache() *TemplateCache {
 	tmplCache.Root = env.Root()
 	tmplCache.Shell = env.Shell()
 	tmplCache.ShellVersion = env.CmdFlags.ShellVersion
-	tmplCache.Code = env.ErrorCode()
+	tmplCache.Code, _ = env.StatusCodes()
 	tmplCache.WSL = env.IsWsl()
-	tmplCache.Segments = make(map[string]interface{})
+	tmplCache.Segments = NewConcurrentMap()
 	tmplCache.PromptCount = env.CmdFlags.PromptCount
 	tmplCache.Env = make(map[string]string)
 	tmplCache.Var = make(map[string]interface{})
@@ -811,6 +810,7 @@ func (env *Shell) TemplateCache() *TemplateCache {
 
 	const separator = "="
 	values := os.Environ()
+	env.DebugF("environment: %v", values)
 	for value := range values {
 		key, val, valid := strings.Cut(values[value], separator)
 		if !valid {

@@ -160,6 +160,7 @@ func TestRenderTemplate(t *testing.T) {
 		Env: make(map[string]string),
 	})
 	env.On("Error", mock2.Anything)
+	env.On("DebugF", mock2.Anything, mock2.Anything).Return(nil)
 	for _, tc := range cases {
 		tmpl := &Text{
 			Template: tc.Template,
@@ -245,6 +246,7 @@ func TestRenderTemplateEnvVar(t *testing.T) {
 			OS:  "darwin",
 		})
 		env.On("Error", mock2.Anything)
+		env.On("DebugF", mock2.Anything, mock2.Anything).Return(nil)
 		tmpl := &Text{
 			Template: tc.Template,
 			Context:  tc.Context,
@@ -320,6 +322,16 @@ func TestCleanTemplate(t *testing.T) {
 			Expected: "{{.Data.OS}}",
 			Template: "{{.OS}}",
 		},
+		{
+			Case:     "Keep .Contains intact for Segments",
+			Expected: `{{.Segments.Contains "Git"}}`,
+			Template: `{{.Segments.Contains "Git"}}`,
+		},
+		{
+			Case:     "Replace a direct call to .Segments with .Segments.List",
+			Expected: `{{.Segments.SimpleMap.Git.Repo}}`,
+			Template: `{{.Segments.Git.Repo}}`,
+		},
 	}
 	for _, tc := range cases {
 		tmpl := &Text{
@@ -342,11 +354,12 @@ func TestSegmentContains(t *testing.T) {
 	}
 
 	env := &mock.MockedEnvironment{}
+	segments := platform.NewConcurrentMap()
+	segments.Set("Git", "foo")
+	env.On("DebugF", mock2.Anything, mock2.Anything).Return(nil)
 	env.On("TemplateCache").Return(&platform.TemplateCache{
-		Env: make(map[string]string),
-		Segments: map[string]interface{}{
-			"Git": nil,
-		},
+		Env:      make(map[string]string),
+		Segments: segments,
 	})
 	for _, tc := range cases {
 		tmpl := &Text{
