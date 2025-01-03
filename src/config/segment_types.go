@@ -95,6 +95,8 @@ const (
 	GCP SegmentType = "gcp"
 	// GIT represents the git status and information
 	GIT SegmentType = "git"
+	// GITLABMR represents the number of gitlab MRs that are open for the project
+	GITLABMR SegmentType = "gitlabmr"
 	// GITVERSION represents the gitversion information
 	GITVERSION SegmentType = "gitversion"
 	// GOLANG writes which go version is currently active
@@ -265,6 +267,7 @@ var Segments = map[SegmentType]func() SegmentWriter{
 	FOSSIL:          func() SegmentWriter { return &segments.Fossil{} },
 	GCP:             func() SegmentWriter { return &segments.Gcp{} },
 	GIT:             func() SegmentWriter { return &segments.Git{} },
+	GITLABMR:        func() SegmentWriter { return &segments.GitlabMR{} },
 	GITVERSION:      func() SegmentWriter { return &segments.GitVersion{} },
 	GOLANG:          func() SegmentWriter { return &segments.Golang{} },
 	HASKELL:         func() SegmentWriter { return &segments.Haskell{} },

@@ -7,12 +7,15 @@
       "request": "launch",
       "mode": "debug",
       "program": "${workspaceRoot}/src",
+      "cwd": "/Users/christopher.maahs/dev/futurama/bender/tfcloud-modules/terraform-aws-private-data-plane",
       "args": [
         "prompt",
-        "print",
-        "primary",
-        "--shell=pwsh",
-        "--terminal-width=200"
+        // "print",
+        // "primary",
+        "debug",
+        "--shell=zsh",
+        // "--terminal-width=200",
+        "--config=~/.config/oh-my-posh/zsh-darkblood.omp.yaml"
       ]
     },
     {

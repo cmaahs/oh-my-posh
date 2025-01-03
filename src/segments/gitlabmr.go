@@ -9,15 +9,15 @@ import (
 
 	git "github.com/go-git/go-git/v5"
 	"github.com/integralist/go-findroot/find"
-	"github.com/jandedobbeleer/oh-my-posh/src/platform"
+	"github.com/jandedobbeleer/oh-my-posh/src/cache"
+	"github.com/jandedobbeleer/oh-my-posh/src/log"
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	gl "github.com/maahsome/gitlab-go"
 	giturls "github.com/whilp/git-urls"
 )
 
 type GitlabMR struct {
-	props properties.Properties
-	env   platform.Environment
+	base
 
 	Count       string
 	AuthorCount string
@@ -99,43 +99,36 @@ func (mr *GitlabMR) Enabled() bool {
 
 	if inProject {
 
-		cacheTimeout := mr.props.GetInt(properties.CacheTimeout, properties.DefaultCacheTimeout)
+		cacheResponse := ""
+		responseCached := false
+
+		cacheTimeout := mr.props.GetString(properties.CacheDuration, "5m0s")
+		cacheID, idCached := mr.env.Cache().Get(fmt.Sprintf("%s_%s", GitlabMRCacheKeyProjectID, gitRoot.Path))
+		if idCached {
+			cacheResponse, responseCached = mr.env.Cache().Get(fmt.Sprintf("%s_%s", GitlabMRCacheKeyResponse, cacheID))
+		}
 
 		response := new(mergeRequestList)
-		if cacheTimeout > 0 {
-			path, err := os.Getwd()
+		if responseCached {
+			err := json.Unmarshal([]byte(cacheResponse), response)
 			if err != nil {
 				mr.Count = ErrorMsg
 				mr.AuthorCount = ErrorMsg
 				return true
 			}
-			id, projectFound := mr.env.Cache().Get(fmt.Sprintf("%s_%s", GitlabMRCacheKeyProjectID, path))
-			if projectFound {
-				// check if data stored in cache
-				val, found := mr.env.Cache().Get(fmt.Sprintf("%s_%s", GitlabMRCacheKeyResponse, id))
-				// we got something from te cache
-				if found {
-					err := json.Unmarshal([]byte(val), response)
-					if err != nil {
-						mr.Count = ErrorMsg
-						mr.AuthorCount = ErrorMsg
-						return true
-					}
-					// mr.URL, _ = mr.env.Cache().Get(GitlabMRCacheKeyURL)
-					authorUsername := mr.props.GetString(AuthorUsername, "")
-					authorOnly := mr.props.GetBool(AuthorOnly, false)
-					mr.buildCount(response, authorOnly, authorUsername)
-					mr.FromCache = "*"
-					return true
-				}
-			}
+			authorUsername := mr.props.GetString(AuthorUsername, "")
+			authorOnly := mr.props.GetBool(AuthorOnly, false)
+			mr.buildCount(response, authorOnly, authorUsername)
+			mr.FromCache = "*"
+			return true
 		}
+
+		// Not Cached, so back to the source
 		// get project id
 		projectID := mr.doFetchGitlabProjectID(gitRoot)
 		if projectID == 0 {
 			mr.Count = "project 0"
 			return true
-			// return false
 		}
 		mr.ProjectID = fmt.Sprintf("%d", projectID)
 		authorOnly := mr.props.GetBool(AuthorOnly, false)
@@ -147,14 +140,6 @@ func (mr *GitlabMR) Enabled() bool {
 
 func (mr *GitlabMR) Template() string {
 	return " {{.Count}} "
-}
-
-func (mr *GitlabMR) Init(props properties.Properties, env platform.Environment) {
-	mr.props = props
-	mr.env = env
-
-	// mr.Count = "10"
-	// mr.Text = props.GetString(NewProp, "Hello")
 }
 
 // TODO: Fix all the duplicate opening of gitlab
@@ -185,6 +170,8 @@ func (mr *GitlabMR) doFetchGitlabProjectID(gitRoot find.Stat) int {
 		glToken = os.Getenv(tokenEnv)
 	}
 
+	log.Debugf("Creating gitlab client for %s", glHost)
+	log.Debugf("gitlab token: %s", glToken)
 	gitClient = gl.New(glHost, "", glToken)
 
 	repo, rerr := git.PlainOpen(gitRoot.Path)
@@ -200,16 +187,20 @@ func (mr *GitlabMR) doFetchGitlabProjectID(gitRoot find.Stat) int {
 	glSlug := strings.TrimPrefix(strings.TrimSuffix(pURLs.EscapedPath(), ".git"), "/")
 	glSlug = url.PathEscape(glSlug)
 
+	log.Debugf("Fetching project id from %s", glSlug)
 	projectID, pierr := gitClient.GetProjectID(glSlug)
+	log.Debug("After GetProjectID call")
 	if pierr != nil {
+		log.Debugf("GetProjectID Error: %e", pierr)
 		return 0
 	}
 
+	log.Debugf("Project ID: %d", projectID)
 	return projectID
 
 }
 
-func (mr *GitlabMR) doFetchGitlabMR(authorOnly bool, id int, cacheTimeout int) {
+func (mr *GitlabMR) doFetchGitlabMR(authorOnly bool, id int, cacheTimeout string) {
 	var gitClient gl.GitlabClient
 
 	glHost := mr.props.GetString(GitlabHost, "gitlab.com")
@@ -246,16 +237,15 @@ func (mr *GitlabMR) doFetchGitlabMR(authorOnly bool, id int, cacheTimeout int) {
 		mr.AuthorCount = ErrorMsg
 		return
 	}
-	if cacheTimeout > 0 {
+	if cacheTimeout != "" {
 		path, err := os.Getwd()
 		if err != nil {
 			mr.Count = ErrorMsg
 			mr.AuthorCount = ErrorMsg
 			return
 		}
-		// persist new forecasts in cache
-		mr.env.Cache().Set(fmt.Sprintf("%s_%d", GitlabMRCacheKeyResponse, id), gitdata, cacheTimeout)
-		mr.env.Cache().Set(fmt.Sprintf("%s_%s", GitlabMRCacheKeyProjectID, path), fmt.Sprintf("%d", id), cacheTimeout)
+		mr.env.Cache().Set(fmt.Sprintf("%s_%d", GitlabMRCacheKeyResponse, id), gitdata, cache.Duration(cacheTimeout))
+		mr.env.Cache().Set(fmt.Sprintf("%s_%s", GitlabMRCacheKeyProjectID, path), fmt.Sprintf("%d", id), cache.Duration(cacheTimeout))
 	}
 
 	mr.buildCount(&mrList, authorOnly, authorUsername)

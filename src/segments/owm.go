@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/log"
-	"github.com/jandedobbeleer/oh-my-posh/src/platform"
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 )
 
@@ -293,7 +292,7 @@ func convertKelvinToCelsius(value float64) int {
 	return int(math.Round(convertedValue))
 }
 
-func (d *Owm) Init(props properties.Properties, env platform.Environment) {
-	d.props = props
-	d.env = env
-}
+// func (d *Owm) Init(props properties.Properties, env platform.Environment) {
+// 	d.props = props
+// 	d.env = env
+// }
