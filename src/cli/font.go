@@ -2,17 +2,18 @@ package cli
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/font"
-	"github.com/jandedobbeleer/oh-my-posh/src/platform"
+	"github.com/jandedobbeleer/oh-my-posh/src/runtime"
+	"github.com/jandedobbeleer/oh-my-posh/src/terminal"
 
 	"github.com/spf13/cobra"
 )
 
 var (
-	user bool
+	zipFolder string
 
-	// fontCmd can work with fonts
 	fontCmd = &cobra.Command{
 		Use:   "font [install|configure]",
 		Short: "Manage fonts",
@@ -36,25 +37,23 @@ This command is used to install fonts and configure the font in your terminal.
 				if len(args) > 1 {
 					fontName = args[1]
 				}
-				env := &platform.Shell{}
-				env.Init()
-				defer env.Close()
 
-				// Windows users need to specify the --user flag if they want to install the font as user
-				// If the user does not specify the --user flag, the font will be installed as a system font
-				// and therefore we need to be administrator
-				system := env.Root()
-				if env.GOOS() == platform.WINDOWS && !user && !system {
-					fmt.Println(`
-    You need to be administrator to install a font as system font.
-    You can either run this command as administrator or specify the --user flag to install the font for your user only:
-
-    oh-my-posh font install --user
-    `)
-					return
+				flags := &runtime.Flags{
+					SaveCache: true,
 				}
 
-				font.Run(fontName, system)
+				env := &runtime.Terminal{}
+				env.Init(flags)
+				defer env.Close()
+
+				terminal.Init(env.Shell())
+
+				if !strings.HasPrefix(zipFolder, "/") {
+					zipFolder += "/"
+				}
+
+				font.Run(fontName, env.Cache(), env.Root(), zipFolder)
+
 				return
 			case "configure":
 				fmt.Println("not implemented")
@@ -65,7 +64,7 @@ This command is used to install fonts and configure the font in your terminal.
 	}
 )
 
-func init() { //nolint:gochecknoinits
+func init() {
+	fontCmd.Flags().StringVar(&zipFolder, "zip-folder", "", "the folder inside the zip file to install fonts from")
 	RootCmd.AddCommand(fontCmd)
-	fontCmd.Flags().BoolVar(&user, "user", false, "install font as user")
 }

@@ -1,13 +1,7 @@
 package segments
 
-import (
-	"github.com/jandedobbeleer/oh-my-posh/src/platform"
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
-)
-
 type Helm struct {
-	props properties.Properties
-	env   platform.Environment
+	base
 
 	Version string
 }
@@ -19,9 +13,9 @@ func (h *Helm) Enabled() bool {
 	}
 
 	inChart := false
-	files := []string{"Chart.yml", "Chart.yaml"}
+	files := []string{"Chart.yml", "Chart.yaml", "helmfile.yaml", "helmfile.yml"}
 	for _, file := range files {
-		if _, err := h.env.HasParentFilePath(file); err == nil {
+		if _, err := h.env.HasParentFilePath(file, false); err == nil {
 			inChart = true
 			break
 		}
@@ -32,11 +26,6 @@ func (h *Helm) Enabled() bool {
 
 func (h *Helm) Template() string {
 	return " Helm {{.Version}}"
-}
-
-func (h *Helm) Init(props properties.Properties, env platform.Environment) {
-	h.props = props
-	h.env = env
 }
 
 func (h *Helm) getVersion() bool {

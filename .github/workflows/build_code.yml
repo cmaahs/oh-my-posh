@@ -11,24 +11,24 @@ on:
 name: Build Code
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     defaults:
       run:
         shell: pwsh
     steps:
     - name: Checkout code 👋
-      uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     - name: Install Go 🗳
       uses: ./.github/workflows/composite/bootstrap-go
     - name: Run GoReleaser 🚀
-      uses: goreleaser/goreleaser-action@5fdedb94abba051217030cc86d4523cf3f02243d
+      uses: goreleaser/goreleaser-action@9ed2f89a662bf1735a48bc8557fd212fa902bebf
       with:
         distribution: goreleaser
-        version: latest
-        args: build --rm-dist --snapshot --skip-post-hooks --skip-before
+        version: v2.3.2
+        args: build --clean --snapshot --skip=post-hooks --skip=before
         workdir: src
     - name: Archive production artifacts
-      uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b
       with:
         name: builds
         retention-days: 1

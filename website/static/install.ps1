@@ -30,17 +30,17 @@ https://ohmyposh.dev/docs/installation/linux
 $installer = ''
 $arch = (Get-CimInstance -Class Win32_Processor -Property Architecture).Architecture | Select-Object -First 1
 switch ($arch) {
-    0 { $installer = "install-386.exe" } # x86
-    5 { $installer = "install-arm64.exe" } # ARM
+    0 { $installer = "install-x86.msi" } # x86
+    5 { $installer = "install-arm64.msi" } # ARM
     9 {
         if ([Environment]::Is64BitOperatingSystem) {
-            $installer = "install-amd64.exe"
+            $installer = "install-x64.msi"
         }
         else {
-            $installer = "install-386.exe"
+            $installer = "install-x86.msi"
         }
     }
-    12 { $installer = "install-arm64.exe" } # Surface Pro X
+    12 { $installer = "install-arm64.msi" } # Surface Pro X
 }
 
 if ([string]::IsNullOrEmpty($installer)) {
@@ -54,12 +54,12 @@ Write-Host "Downloading $installer..."
 
 # validate the availability of New-TemporaryFile
 if (Get-Command -Name New-TemporaryFile -ErrorAction SilentlyContinue) {
-    $tmp = New-TemporaryFile | Rename-Item -NewName { $_ -replace 'tmp$', 'exe' } -PassThru
+    $tmp = New-TemporaryFile | Rename-Item -NewName { $_ -replace 'tmp$', 'msi' } -PassThru
 }
 else {
-    $tmp = New-Item -Path $env:TEMP -Name ([System.IO.Path]::GetRandomFileName() -replace '\.\w+$', '.exe') -Force -ItemType File
+    $tmp = New-Item -Path $env:TEMP -Name ([System.IO.Path]::GetRandomFileName() -replace '\.\w+$', '.msi') -Force -ItemType File
 }
-$url = "https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/$installer"
+$url = "https://cdn.ohmyposh.dev/releases/latest/$installer"
 
 # check if we can make https requests and download the binary
 try {
@@ -73,12 +73,13 @@ catch {
 
 Invoke-WebRequest -OutFile $tmp $url
 Write-Host 'Running installer...'
-$installMode = "/CURRENTUSER"
+
 if ($AllUsers) {
-    $installMode = "/ALLUSERS"
+    & "$tmp" INSTALLER=script ALLUSERS=1
+} else {
+    & "$tmp" /quiet INSTALLER=script
 }
-& "$tmp" /VERYSILENT $installMode | Out-Null
-$tmp | Remove-Item
+
 Write-Host @'
 Done!
 

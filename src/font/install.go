@@ -7,7 +7,12 @@ import (
 	"bytes"
 	"io"
 	"path"
+	stdruntime "runtime"
+	"slices"
 	"strings"
+
+	"github.com/jandedobbeleer/oh-my-posh/src/runtime"
+	"github.com/jandedobbeleer/oh-my-posh/src/runtime/cmd"
 )
 
 func contains[S ~[]E, E comparable](s S, e E) bool {
@@ -16,10 +21,11 @@ func contains[S ~[]E, E comparable](s S, e E) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
-func InstallZIP(data []byte, user bool) ([]string, error) {
+func InstallZIP(data []byte, m *main) ([]string, error) {
 	var families []string
 	bytesReader := bytes.NewReader(data)
 
@@ -30,44 +36,68 @@ func InstallZIP(data []byte, user bool) ([]string, error) {
 
 	fonts := make(map[string]*Font)
 
-	for _, zf := range zipReader.File {
-		rc, err := zf.Open()
-		if err != nil {
-			return families, err
-		}
-		defer rc.Close()
-
-		data, err := io.ReadAll(rc)
-		if err != nil {
-			return families, err
+	for _, file := range zipReader.File {
+		// prevent zipslip attacks
+		// https://security.snyk.io/research/zip-slip-vulnerability
+		// skip folders
+		if strings.Contains(file.Name, "..") || strings.HasSuffix(file.Name, "/") {
+			continue
 		}
 
-		fontData, err := newFont(zf.Name, data)
+		fontFileName := path.Base(file.Name)
+		fontRelativeFileName := strings.TrimPrefix(file.Name, m.Folder)
+
+		// do not install fonts that are not in the specified installation folder
+		if fontFileName != fontRelativeFileName {
+			continue
+		}
+
+		fontReader, err := file.Open()
 		if err != nil {
 			continue
 		}
 
-		if _, found := fonts[fontData.Name]; !found {
-			fonts[fontData.Name] = fontData
-		} else {
-			// prefer OTF over TTF; otherwise prefer the first font we find
-			first := strings.ToLower(path.Ext(fonts[fontData.Name].FileName))
-			second := strings.ToLower(path.Ext(fontData.FileName))
-			if first != second && second == ".otf" {
-				fonts[fontData.Name] = fontData
-			}
+		defer fontReader.Close()
+
+		fontBytes, err := io.ReadAll(fontReader)
+		if err != nil {
+			continue
+		}
+
+		font, err := newFont(fontFileName, fontBytes)
+		if err != nil {
+			continue
+		}
+
+		if _, found := fonts[font.Name]; !found {
+			fonts[font.Name] = font
+			continue
+		}
+
+		// prefer .ttf files over other file types when we have a duplicate
+		first := strings.ToLower(path.Ext(fonts[font.Name].FileName))
+		second := strings.ToLower(path.Ext(font.FileName))
+		if first != second && second == ".ttf" {
+			fonts[font.Name] = font
 		}
 	}
 
 	for _, font := range fonts {
-		if err = install(font, user); err != nil {
-			return families, err
+		if err = install(font, m.system); err != nil {
+			continue
 		}
 
-		if !contains(families, font.Family) {
+		if found := contains(families, font.Family); !found {
 			families = append(families, font.Family)
 		}
 	}
+
+	// Update the font cache when installing fonts on Linux
+	if stdruntime.GOOS == runtime.LINUX || stdruntime.GOOS == runtime.DARWIN {
+		_, _ = cmd.Run("fc-cache", "-f")
+	}
+
+	slices.Sort(families)
 
 	return families, nil
 }
