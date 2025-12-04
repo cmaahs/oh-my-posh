@@ -1,14 +1,15 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/jandedobbeleer/oh-my-posh/src/cache"
 	"github.com/jandedobbeleer/oh-my-posh/src/config"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/path"
-	"github.com/jandedobbeleer/oh-my-posh/src/shell"
 
 	"github.com/spf13/cobra"
 )
@@ -34,46 +35,62 @@ Exports the config file "~/myconfig.omp.json" in TOML format and prints the resu
 Exports the current config to "~/new_config.omp.json" (in JSON format).`,
 	Args: cobra.NoArgs,
 	Run: func(_ *cobra.Command, _ []string) {
-		if len(output) == 0 && len(format) == 0 {
+		if output == "" && format == "" {
 			// usage error
 			fmt.Println("neither output path nor export format is specified")
-			os.Exit(2)
+			exitcode = 2
+			return
 		}
 
-		configFile := config.Path(configFlag)
-		cfg := config.Load(configFile, shell.GENERIC, false)
+		cache.Init(os.Getenv("POSH_SHELL"))
 
-		validateExportFormat := func() {
+		err := setConfigFlag()
+		if err != nil {
+			exitcode = 666
+			fmt.Println(err.Error())
+			return
+		}
+
+		cfg := config.Load(configFlag, false)
+
+		validateExportFormat := func() error {
 			format = strings.ToLower(format)
 			switch format {
-			case "json", "jsonc":
+			case config.JSON, config.JSONC:
 				format = config.JSON
-			case "toml", "tml":
+			case config.TOML, config.TML:
 				format = config.TOML
-			case "yaml", "yml":
+			case config.YAML, config.YML:
 				format = config.YAML
 			default:
-				formats := []string{"json", "jsonc", "toml", "tml", "yaml", "yml"}
+				formats := []string{config.JSON, config.JSONC, config.TOML, config.TML, config.YAML, config.YML}
 				// usage error
 				fmt.Printf("export format must be one of these: %s\n", strings.Join(formats, ", "))
-				os.Exit(2)
+				exitcode = 2
+				return errors.New("invalide export format")
 			}
+
+			return nil
 		}
 
 		if len(format) != 0 {
-			validateExportFormat()
+			if err := validateExportFormat(); err != nil {
+				return
+			}
 		}
 
-		if len(output) == 0 {
+		if output == "" {
 			fmt.Print(cfg.Export(format))
 			return
 		}
 
-		cfg.Output = cleanOutputPath(output)
+		cfg.Source = cleanOutputPath(output)
 
-		if len(format) == 0 {
+		if format == "" {
 			format = strings.TrimPrefix(filepath.Ext(output), ".")
-			validateExportFormat()
+			if err := validateExportFormat(); err != nil {
+				return
+			}
 		}
 
 		cfg.Write(format)

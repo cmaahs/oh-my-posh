@@ -5,35 +5,46 @@ sidebar_label: 🧩 Customize
 ---
 
 import Tabs from "@theme/Tabs";
-import TabItem from "@theme/TabItem"
+import TabItem from "@theme/TabItem";
 
-The standard initialization sets Oh My Posh' default theme. This configuration is embedded
-and thus kept up-to-date with Oh My Posh.
+The standard initialization sets Oh My Posh' default, built-in theme.
 
-To set a new config/theme you need to change the `--config` option of the `oh-my-posh init <shell>`
-line in your `profile` or `.<shell>rc` script (see [prompt][prompt]) and point it to the location of a
-predefined [theme][themes] or custom configuration.
+To set a new configuration or theme you need to change the `--config` option of the `oh-my-posh init <shell>`
+line in your `profile` or `.<shell>rc` script (see [prompt][prompt]).
 
-There are two possible values the `--config` flag can handle:
+These are the three possible values the `--config` flag can handle:
 
 - a path to a local configuration file
 
-```powershell
---config 'C:/Users/Posh/jandedobbeleer.omp.json'
-```
+  ```powershell
+  --config 'C:/Users/Posh/myconfig.omp.json'
+  ```
+
+- a pointer to a theme, without the extensions
+
+  ```powershell
+  --config 'jandedobbeleer'
+  ```
 
 - a URL pointing to a remote config
 
-```powershell
---config 'https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/jandedobbeleer.omp.json'
-```
+  ```powershell
+  --config 'https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/jandedobbeleer.omp.json'
+  ```
+
+:::info
+Using a theme name (like `jandedobbeleer`) or a remote URL requires an active internet connection
+and will download the configuration on shell start. Caching is in place, but for better performance,
+it's recommended to use a local configuration file.
+:::
 
 ### Set the configuration
 
-The example below use a local path to the [jandedobbeleer][jandedobbeleer] theme, adjust the `--config` value
+The example below uses a local path to the [jandedobbeleer][jandedobbeleer] theme, adjust the `--config` value
 to reflect your configuration file, local or remote.
 
 <Tabs
+  queryString="shell"
   defaultValue="powershell"
   groupId="shell"
   values={[
@@ -43,7 +54,6 @@ to reflect your configuration file, local or remote.
     { label: 'fish', value: 'fish', },
     { label: 'nu', value: 'nu', },
     { label: 'powershell', value: 'powershell', },
-    { label: 'tcsh', value: 'tcsh', },
     { label: 'xonsh', value: 'xonsh', },
     { label: 'zsh', value: 'zsh', },
   ]
@@ -104,7 +114,8 @@ exec elvish
 <TabItem value="fish">
 
 :::caution
-It is recommended to use the latest version of Fish. Versions below 3.1.2 have issues displaying the prompt.
+It is recommended to use the latest version of Fish. Versions below 4.1.0 have issues and do not support [transient prompt].
+
 :::
 
 Adjust the Oh My Posh init line in `~/.config/fish/config.fish` by adding the `--config` flag with
@@ -124,36 +135,15 @@ Once altered, reload your config for the changes to take effect.
 <TabItem value="nu">
 
 :::caution
-Oh My Posh requires Nushell v0.93.0 or higher.
+Oh My Posh requires Nushell `v0.104.0` or higher.
 :::
 
-Adjust the Oh My Posh init line in the Nushell env file (`$nu.env-path`) by adding the `--config` flag
+Adjust the Oh My Posh init line in the Nushell config file (`$nu.config-path`) by adding the `--config` flag
 with the location of your configuration.
 
 ```bash
 oh-my-posh init nu --config ~/jandedobbeleer.omp.json
 ```
-
-This saves the initialization script to `~/.oh-my-posh.nu`.
-Now, edit the Nushell config file (`$nu.config-path`) and add the following line at the bottom:
-
-```bash
-source ~/.oh-my-posh.nu
-```
-
-If you want to save the initialization script elsewhere, you can change the first line to something like this:
-
-```bash
-oh-my-posh init nu --config ~/jandedobbeleer.omp.json --print | save /mylocation/myscript.nu --force
-```
-
-And change the `source` line to:
-
-```bash
-source /mylocation/myscript.nu
-```
-
-Once altered, restart Nushell for the changes to take effect.
 
 </TabItem>
 <TabItem value="powershell">
@@ -181,21 +171,6 @@ New-Item -Path $PROFILE -Type File -Force
 In this scenario, it can also be that PowerShell blocks running local scripts. To solve that, set PowerShell
 to only require remote scripts to be signed using `Set-ExecutionPolicy RemoteSigned`, or [sign the profile][sign].
 :::
-
-</TabItem>
-<TabItem value="tcsh">
-
-Adjust the Oh My Posh init line in `~/.tcshrc` by adding the `--config` flag with the location of your configuration.
-
-```bash
-eval "`oh-my-posh init tcsh --config ~/jandedobbeleer.omp.json`"
-```
-
-Note that the surrounding quotes are required. Once added, reload your profile for the changes to take effect.
-
-```bash
-exec tcsh
-```
 
 </TabItem>
 <TabItem value="xonsh">
@@ -237,40 +212,6 @@ Windows user's home folder.
 Inside the WSL, you can find your Windows user's home folder here: `/mnt/c/Users/<WINDOWSUSERNAME>`.
 :::
 
-### Themes
-
-The Windows and homebrew installers also bundle the **predefined configurations** ([themes][themes]). You can use the
-following way to reference them directly. This will keep them up-to-date and compatible with future updates.
-
-<Tabs
-  defaultValue="windows"
-  groupId="shell"
-  values={[
-    { label: 'windows', value: 'windows', },
-    { label: 'homebrew', value: 'homebrew', },
-  ]
-}>
-<TabItem value="windows">
-
-For example, to use the [jandedobbeleer][jandedobbeleer] theme, alter the init line like this (`powershell`):
-
-```powershell
-oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH/jandedobbeleer.omp.json" | Invoke-Expression
-```
-
-</TabItem>
-<TabItem value="homebrew">
-
-When using homebrew, all themes are installed alongside Oh My Posh in `$(brew --prefix oh-my-posh)/themes`.
-To use any of the themes, use the following syntax (`zsh`):
-
-```bash
-eval "$(oh-my-posh init zsh --config $(brew --prefix oh-my-posh)/themes/jandedobbeleer.omp.json)"
-```
-
-</TabItem>
-</Tabs>
-
 ### Custom configuration
 
 Maybe there's a theme you like, but you don't fancy the colors. Or, maybe there's a segment you
@@ -281,14 +222,38 @@ You can export the current theme (default, or set via `--config`) to the format 
 which can be used to tweak and store as your own custom configuration.
 
 ```bash
-oh-my-posh config export --output ~/.mytheme.omp.json
+oh-my-posh config export --config jandedobbeleer --output ~/.mytheme.omp.json
 ```
 
-:::caution
-Be careful not to adjust the theme files in their original location as they're updated together with Oh My Posh
-which will remove your customizations. Always copy, or export them and save the new configuration outside of the
-Oh My Posh internal themes folder.
-:::
+### Live reloading
+
+By default, the configuration is cached for performance reasons. If you make changes to your configuration file
+and want to see those changes reflected in your prompt without restarting your shell, you can use the following
+command to enable live reload.
+
+```bash
+oh-my-posh enable reload
+```
+
+You can disable live reload with:
+
+```bash
+oh-my-posh disable reload
+```
+
+#### Previewing changes
+
+If you want to preview your changes, you can use the following command to render every configured prompt.
+
+```bash
+oh-my-posh print preview
+```
+
+Use the `--force` flag in case you want to render all segments, regardless of the current context.
+
+```bash
+oh-my-posh print preview --force
+```
 
 ### Read the docs
 
@@ -303,3 +268,4 @@ segments section covers how to configure each available segment.
 [json-schema]: https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json
 [homebrew-problem]: https://github.com/JanDeDobbeleer/oh-my-posh/discussions/2644
 [sign]: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_signing?view=powershell-7.3#methods-of-signing-scripts
+[transient prompt]: /docs/configuration/transient

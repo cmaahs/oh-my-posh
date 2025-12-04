@@ -1,6 +1,7 @@
 package color
 
 import (
+	"encoding/gob"
 	"fmt"
 	"strconv"
 	"strings"
@@ -8,9 +9,22 @@ import (
 
 	"github.com/gookit/color"
 	"github.com/jandedobbeleer/oh-my-posh/src/cache"
+	"github.com/jandedobbeleer/oh-my-posh/src/generics"
 	"github.com/jandedobbeleer/oh-my-posh/src/log"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime"
 	"github.com/jandedobbeleer/oh-my-posh/src/template"
+)
+
+func init() {
+	gob.Register(&Set{})
+	gob.Register((*Ansi)(nil))
+	gob.Register(&Palette{})
+	gob.Register(&Palettes{})
+	gob.Register(&Cycle{})
+}
+
+const (
+	accentColor = "accent_color"
 )
 
 var TrueColor = true
@@ -26,8 +40,8 @@ type String interface {
 }
 
 type Set struct {
-	Background Ansi `json:"background" toml:"background"`
-	Foreground Ansi `json:"foreground" toml:"foreground"`
+	Background Ansi `json:"background" toml:"background" yaml:"background"`
+	Foreground Ansi `json:"foreground" toml:"foreground" yaml:"foreground"`
 }
 
 func (c *Set) String() string {
@@ -131,12 +145,7 @@ func (c Ansi) ResolveTemplate() Ansi {
 		return emptyColor
 	}
 
-	tmpl := &template.Text{
-		Template: string(c),
-		Context:  nil,
-	}
-
-	text, err := tmpl.Render()
+	text, err := template.Render(string(c), nil)
 	if err != nil {
 		return Transparent
 	}
@@ -168,10 +177,8 @@ func (d *Defaults) SetAccentColor(env runtime.Environment, defaultColor Ansi) {
 	defer log.Trace(time.Now())
 
 	// get accent color from session cache first
-	if accent, OK := env.Session().Get("accent_color"); OK {
-		accentColors := &Set{}
-		accentColors.ParseString(accent)
-		d.accent = accentColors
+	if accent, OK := cache.Get[*Set](cache.Device, accentColor); OK {
+		d.accent = accent
 		return
 	}
 
@@ -185,7 +192,7 @@ func (d *Defaults) SetAccentColor(env runtime.Environment, defaultColor Ansi) {
 		return
 	}
 
-	if len(defaultColor) == 0 {
+	if defaultColor == "" {
 		return
 	}
 
@@ -197,7 +204,7 @@ func (d *Defaults) SetAccentColor(env runtime.Environment, defaultColor Ansi) {
 		Background: Ansi(background.String()),
 	}
 
-	env.Session().Set("accent_color", d.accent.String(), cache.INFINITE)
+	cache.Set(cache.Device, accentColor, d.accent, cache.INFINITE)
 }
 
 type RGB struct {
@@ -232,13 +239,8 @@ var (
 	}
 )
 
-const (
-	foregroundIndex = 0
-	backgroundIndex = 1
-)
-
 func (d *Defaults) ToAnsi(ansiColor Ansi, isBackground bool) Ansi {
-	if len(ansiColor) == 0 {
+	if ansiColor == "" {
 		return emptyColor
 	}
 
@@ -301,11 +303,7 @@ func (d *Defaults) Resolve(colorString Ansi) (Ansi, error) {
 // known ANSI color name.
 func getAnsiColorFromName(colorValue Ansi, isBackground bool) (Ansi, error) {
 	if colorCodes, found := ansiColorCodes[colorValue]; found {
-		if isBackground {
-			return colorCodes[backgroundIndex], nil
-		}
-
-		return colorCodes[foregroundIndex], nil
+		return colorCodes[generics.ToInt[int](isBackground)], nil
 	}
 
 	return "", fmt.Errorf("color name %s does not exist", colorValue)
@@ -355,10 +353,12 @@ func (c *Cached) ToAnsi(colorString Ansi, isBackground bool) Ansi {
 	if c.colorCache == nil {
 		c.colorCache = make(map[cachedColorKey]Ansi)
 	}
+
 	key := cachedColorKey{colorString, isBackground}
 	if ansiColor, hit := c.colorCache[key]; hit {
 		return ansiColor
 	}
+
 	ansiColor := c.ansiColors.ToAnsi(colorString, isBackground)
 	c.colorCache[key] = ansiColor
 	return ansiColor

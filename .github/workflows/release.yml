@@ -8,6 +8,10 @@ on:
       - "src/**"
       - "packages/**"
       - ".github/workflows/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
 
 jobs:
   changelog:
@@ -19,10 +23,10 @@ jobs:
       skipped: ${{ steps.changelog.outputs.skipped }}
     steps:
       - name: Checkout code 👋
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
       - name: Create changelog ✍️
         id: changelog
-        uses: TriPSs/conventional-changelog-action@67139193614f5b9e8db87da1bd4240922b34d765
+        uses: TriPSs/conventional-changelog-action@84dadaf2c367cb52af02737cd9c7e888807219e7
         with:
           github-token: ${{ secrets.github_token }}
           skip-version-file: "true"
@@ -41,16 +45,16 @@ jobs:
         working-directory: ${{ github.workspace }}/build
     steps:
       - name: Checkout code 👋
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
       - name: Install Go 🗳
         uses: ./.github/workflows/composite/bootstrap-go
       - name: Pre Build 😸
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         run: |
-          ./pre.ps1 -Version ${{ needs.changelog.outputs.version }}
+          ./pre.ps1 -Version ${{ needs.changelog.outputs.version }} -SDKVersion "10.0.26100.0"
       - name: Run GoReleaser 🚀
-        uses: goreleaser/goreleaser-action@9ed2f89a662bf1735a48bc8557fd212fa902bebf
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a
         with:
           distribution: goreleaser
           version: v2.3.2
@@ -63,7 +67,7 @@ jobs:
       - name: Post Build 🤐
         run: |
           ./post.ps1
-      - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
           name: build-artifacts
           path: |
@@ -77,15 +81,15 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        arch: [x64, arm64, x86]
+        arch: [x64, arm64]
     defaults:
       run:
         shell: pwsh
         working-directory: ${{ github.workspace }}/packages/msi
     steps:
       - name: Checkout code 👋
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
         with:
           name: build-artifacts
           path: dist
@@ -99,13 +103,13 @@ jobs:
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         run: |
           $version = '${{ needs.changelog.outputs.version }}'.TrimStart("v")
-          ./build.ps1 -Architecture ${{ matrix.arch }}  -Version $version -Copy -Sign
-      - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b
+          ./build.ps1 -Architecture ${{ matrix.arch }}  -Version $version -Copy -Sign -SDKVersion "10.0.26100.0"
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
           name: msi-artifact-${{ matrix.arch }}
           path: |
             packages/msi/out/install-${{ matrix.arch }}.msi
-            packages/msi/out/install-${{ matrix.arch }}.msi.sha256
+            packages/msi/out/install-${{ matrix.arch }}.msix
   release:
     runs-on: ubuntu-latest
     needs:
@@ -113,7 +117,7 @@ jobs:
       - artifacts
       - msi
     steps:
-      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
         with:
           merge-multiple: true
       - name: Upload version file
@@ -121,10 +125,10 @@ jobs:
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.CDN_CONNECTIONSTRING }}
         run: |
           echo v${{ needs.changelog.outputs.version }} > version.txt
-          az storage blob upload-batch --destination v${{ needs.changelog.outputs.version }} --source .
-          az storage blob upload-batch --destination latest --overwrite true --source .
+          az storage blob upload-batch --destination releases/v${{ needs.changelog.outputs.version }} --source .
+          az storage blob upload-batch --destination releases/latest --overwrite true --source .
       - name: Release 🎓
-        uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974
+        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe
         with:
           tag_name: ${{ needs.changelog.outputs.tag }}
           body: ${{ needs.changelog.outputs.body }}
@@ -132,3 +136,44 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           files: |
             *
+  winget:
+    runs-on: windows-latest
+    needs:
+      - changelog
+      - release
+    env:
+      WINGETCREATE_TOKEN: ${{ secrets.WINGETCREATE_TOKEN }}
+    steps:
+    - name: Create manifest and submit PR 📦
+      shell: pwsh
+      run: |
+        Write-Host "Preparing to submit to WinGet repository..." -ForegroundColor Green
+
+        # Install the latest wingetcreate exe
+        # Need to do things this way, see https://github.com/PowerShell/PowerShell/issues/13138
+        Write-Verbose "Importing Appx module using Windows PowerShell compatibility"
+        Import-Module Appx -UseWindowsPowerShell -ErrorAction Stop
+
+        # Download and install Winget-Create msixbundle
+        $appxBundleFile = Join-Path -Path $env:TEMP -ChildPath "wingetcreate.msixbundle"
+        Write-Verbose "Downloading wingetcreate to: $appxBundleFile"
+
+        Invoke-WebRequest -Uri "https://aka.ms/wingetcreate/latest/msixbundle" -OutFile $appxBundleFile -ErrorAction Stop
+        Add-AppxPackage -Path $appxBundleFile -ErrorAction Stop
+
+        Write-Verbose "Successfully installed wingetcreate"
+
+        # Submit the PR to WinGet repository
+        Write-Host "Submitting pull request to WinGet repository..." -ForegroundColor Green
+
+        $version = "${{ needs.changelog.outputs.tag }}"
+        $version = $version.TrimStart('v')
+
+        $urls = @(
+            "https://github.com/JanDeDobbeleer/oh-my-posh/releases/download/v$version/install-x64.msi|x64",
+            "https://github.com/JanDeDobbeleer/oh-my-posh/releases/download/v$version/install-x64.msix|x64",
+            "https://github.com/JanDeDobbeleer/oh-my-posh/releases/download/v$version/install-arm64.msi|arm64",
+            "https://github.com/JanDeDobbeleer/oh-my-posh/releases/download/v$version/install-arm64.msix|arm64"
+        )
+
+        wingetcreate update JanDeDobbeleer.OhMyPosh --version $version --token $env:WINGETCREATE_TOKEN --submit --urls $urls

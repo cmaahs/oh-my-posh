@@ -14,7 +14,7 @@ import (
 
 type Python struct {
 	Venv string
-	language
+	Language
 }
 
 const (
@@ -55,14 +55,14 @@ func (p *Python) Enabled() bool {
 	}
 	p.versionURLTemplate = "https://docs.python.org/release/{{ .Major }}.{{ .Minor }}.{{ .Patch }}/whatsnew/changelog.html#python-{{ .Major }}-{{ .Minor }}-{{ .Patch }}"
 	p.displayMode = p.props.GetString(DisplayMode, DisplayModeEnvironment)
-	p.language.loadContext = p.loadContext
-	p.language.inContext = p.inContext
+	p.Language.loadContext = p.loadContext
+	p.Language.inContext = p.inContext
 
-	return p.language.Enabled()
+	return p.Language.Enabled()
 }
 
 func (p *Python) loadContext() {
-	if !p.language.props.GetBool(FetchVirtualEnv, true) {
+	if !p.props.GetBool(FetchVirtualEnv, true) {
 		return
 	}
 	if prompt := p.pyvenvCfgPrompt(); len(prompt) > 0 {
@@ -76,16 +76,16 @@ func (p *Python) loadContext() {
 		"CONDA_DEFAULT_ENV",
 	}
 
-	folderNameFallback := p.language.props.GetBool(FolderNameFallback, true)
-	defaultVenvNames := p.language.props.GetStringArray(DefaultVenvNames, []string{
+	folderNameFallback := p.props.GetBool(FolderNameFallback, true)
+	defaultVenvNames := p.props.GetStringArray(DefaultVenvNames, []string{
 		".venv",
 		"venv",
 	})
 
 	var venv string
 	for _, venvVar := range venvVars {
-		venv = p.language.env.Getenv(venvVar)
-		if len(venv) == 0 {
+		venv = p.env.Getenv(venvVar)
+		if venv == "" {
 			continue
 		}
 
@@ -109,7 +109,7 @@ func (p *Python) inContext() bool {
 }
 
 func (p *Python) canUseVenvName(name string) bool {
-	if p.language.props.GetBool(properties.DisplayDefault, true) {
+	if p.props.GetBool(properties.DisplayDefault, true) {
 		return true
 	}
 
@@ -129,17 +129,16 @@ func (p *Python) pyenvVersion() (string, error) {
 	// Is our Python executable at $PYENV_ROOT/bin/python ?
 	// Should p.env expose command paths?
 	cmdPath := p.env.CommandPath("python")
-	if len(cmdPath) == 0 {
+	if cmdPath == "" {
 		cmdPath = p.env.CommandPath("python3")
 	}
 
-	if len(cmdPath) == 0 {
+	if cmdPath == "" {
 		return "", errors.New("no python executable found")
 	}
 
 	pyEnvRoot := p.env.Getenv("PYENV_ROOT")
-	// TODO:  pyenv-win has this at $PYENV_ROOT/pyenv-win/shims
-	if cmdPath != filepath.Join(pyEnvRoot, "shims", "python") {
+	if pyEnvRoot == "" || !strings.HasPrefix(cmdPath, pyEnvRoot) {
 		return "", fmt.Errorf("executable at %s is not a pyenv shim", cmdPath)
 	}
 
@@ -150,7 +149,7 @@ func (p *Python) pyenvVersion() (string, error) {
 	}
 
 	versionString := strings.Split(cmdOutput, ":")[0]
-	if len(versionString) == 0 {
+	if versionString == "" {
 		return "", errors.New("no pyenv version-name found")
 	}
 
@@ -176,26 +175,26 @@ func (p *Python) pyenvVersion() (string, error) {
 }
 
 func (p *Python) pyvenvCfgPrompt() string {
-	cmdPath := p.language.env.CommandPath("python")
-	if len(cmdPath) == 0 {
-		cmdPath = p.language.env.CommandPath("python3")
+	cmdPath := p.env.CommandPath("python")
+	if cmdPath == "" {
+		cmdPath = p.env.CommandPath("python3")
 	}
 
-	if len(cmdPath) == 0 {
+	if cmdPath == "" {
 		return ""
 	}
 
 	pyvenvDir := filepath.Dir(cmdPath)
-	if !p.language.env.HasFilesInDir(pyvenvDir, "pyvenv.cfg") {
+	if !p.env.HasFilesInDir(pyvenvDir, "pyvenv.cfg") {
 		pyvenvDir = filepath.Dir(pyvenvDir)
 	}
 
-	if !p.language.env.HasFilesInDir(pyvenvDir, "pyvenv.cfg") {
+	if !p.env.HasFilesInDir(pyvenvDir, "pyvenv.cfg") {
 		return ""
 	}
 
 	pyvenvCfg := p.env.FileContent(filepath.Join(pyvenvDir, "pyvenv.cfg"))
-	for _, line := range strings.Split(pyvenvCfg, "\n") {
+	for line := range strings.SplitSeq(pyvenvCfg, "\n") {
 		lineSplit := strings.SplitN(line, "=", 2)
 		if len(lineSplit) != 2 {
 			continue

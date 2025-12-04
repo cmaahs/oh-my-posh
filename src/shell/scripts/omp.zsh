@@ -1,11 +1,13 @@
-export POSH_THEME=::CONFIG::
 export POSH_SHELL='zsh'
 export POSH_SHELL_VERSION=$ZSH_VERSION
-export POSH_SESSION_ID=::SESSION_ID::
 export POWERLINE_COMMAND='oh-my-posh'
 export CONDA_PROMPT_MODIFIER=false
 export ZLE_RPROMPT_INDENT=0
 export OSTYPE=$OSTYPE
+
+# disable all known python virtual environment prompts
+export VIRTUAL_ENV_DISABLE_PROMPT=1
+export PYENV_VIRTUALENV_DISABLE_PROMPT=1
 
 _omp_executable=::OMP::
 _omp_tooltip_command=''
@@ -55,6 +57,7 @@ function _omp_preexec() {
 function _omp_precmd() {
   _omp_status=$?
   _omp_pipestatus=(${pipestatus[@]})
+  _omp_job_count=${#jobstates}
   _omp_stack_count=${#dirstack[@]}
   _omp_execution_time=-1
   _omp_no_status=true
@@ -122,7 +125,9 @@ function _omp_get_prompt() {
     --pipestatus="${_omp_pipestatus[*]}" \
     --no-status=$_omp_no_status \
     --execution-time=$_omp_execution_time \
+    --job-count=$_omp_job_count \
     --stack-count=$_omp_stack_count \
+    --terminal-width="${COLUMNS-0}" \
     ${args[@]}
 }
 
@@ -130,6 +135,8 @@ function _omp_render_tooltip() {
   if [[ $KEYS != ' ' ]]; then
     return
   fi
+
+  setopt local_options no_shwordsplit
 
   # Get the first word of command line as tip.
   local tooltip_command=${${(MS)BUFFER##[[:graph:]]*}%%[[:space:]]*}
@@ -158,7 +165,13 @@ function _omp_zle-line-init() {
   local -i ret=$?
   (( $+zle_bracketed_paste )) && print -r -n - $zle_bracketed_paste[2]
 
-  eval "$(_omp_get_prompt transient --eval)"
+  # We need this workaround because when the `filler` is set,
+  # there will be a redundant blank line below the transient prompt if the input is empty.
+  local terminal_width_option
+  if [[ -z $BUFFER ]]; then
+    terminal_width_option="--terminal-width=$((${COLUMNS-0} - 1))"
+  fi
+  eval "$(_omp_get_prompt transient --eval $terminal_width_option)"
   zle .reset-prompt
 
   if ((ret)); then

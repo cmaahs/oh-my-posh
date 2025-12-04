@@ -36,7 +36,7 @@ type Mercurial struct {
 	ChangeSetID       string
 	ChangeSetIDShort  string
 	Branch            string
-	scm
+	Scm
 	Bookmarks []string
 	Tags      []string
 	IsTip     bool
@@ -83,10 +83,10 @@ func (hg *Mercurial) shouldDisplay() bool {
 
 	hg.setDir(hgdir.ParentFolder)
 
-	hg.workingDir = hgdir.Path
-	hg.rootDir = hgdir.Path
+	hg.mainSCMDir = hgdir.Path
+	hg.scmDir = hgdir.Path
 	// convert the worktree file path to a windows one when in a WSL shared folder
-	hg.realDir = strings.TrimSuffix(hg.convertToWindowsPath(hgdir.Path), "/.hg")
+	hg.repoRootDir = strings.TrimSuffix(hg.convertToWindowsPath(hgdir.Path), "/.hg")
 	return true
 }
 
@@ -103,7 +103,7 @@ func (hg *Mercurial) setMercurialStatus() {
 	hg.Branch = hg.command
 
 	idString := hg.getHgCommandOutput("log", "-r", ".", "--template", hgLogTemplate)
-	if len(idString) == 0 {
+	if idString == "" {
 		return
 	}
 
@@ -139,19 +139,19 @@ func (hg *Mercurial) setMercurialStatus() {
 
 	statusString := hg.getHgCommandOutput("status")
 
-	if len(statusString) == 0 {
+	if statusString == "" {
 		return
 	}
 
-	statusLines := strings.Split(statusString, "\n")
+	statusLines := strings.SplitSeq(statusString, "\n")
 
-	for _, status := range statusLines {
+	for status := range statusLines {
 		hg.Working.add(status[:1])
 	}
 }
 
 func doSplit(s string) []string {
-	if len(s) == 0 {
+	if s == "" {
 		return []string{}
 	}
 
@@ -165,7 +165,7 @@ func RemoveAtIndex(s []string, index int) []string {
 }
 
 func (hg *Mercurial) getHgCommandOutput(command string, args ...string) string {
-	args = append([]string{"-R", hg.realDir, command}, args...)
+	args = append([]string{"-R", hg.repoRootDir, command}, args...)
 	val, err := hg.env.RunCommand(hg.command, args...)
 	if err != nil {
 		return ""

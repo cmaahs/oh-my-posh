@@ -42,7 +42,7 @@
           "background": "#516BEB",
           "foreground": "#ffffff",
           "style": "diamond",
-          "template": "RAM: {{ (div ((sub .PhysicalTotalMemory .PhysicalFreeMemory)|float64) 1073741824.0) }}/{{ (div .PhysicalTotalMemory 1073741824.0) }}GB \ue266 ",
+          "template": "RAM: {{ (div ((sub .PhysicalTotalMemory .PhysicalAvailableMemory)|float64) 1073741824.0) }}/{{ (div .PhysicalTotalMemory 1073741824.0) }}GB \ue266 ",
           "trailing_diamond": "<transparent,#516BEB>\ue0b2</>",
           "type": "sysinfo"
         },
@@ -85,7 +85,6 @@
           "leading_diamond": "\ue0b2",
           "properties": {
             "branch_icon": "\ue725 ",
-            "fetch_stash_count": true,
             "fetch_status": true,
             "fetch_upstream_icon": true,
             "fetch_worktree_count": true

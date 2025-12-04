@@ -1,7 +1,7 @@
 package segments
 
 type Mvn struct {
-	language
+	Language
 }
 
 func (m *Mvn) Enabled() bool {
@@ -20,7 +20,7 @@ func (m *Mvn) Enabled() bool {
 		m.commands[0].executable = mvnw.Path
 	}
 
-	return m.language.Enabled()
+	return m.Language.Enabled()
 }
 
 func (m *Mvn) Template() string {

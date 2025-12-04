@@ -53,6 +53,7 @@ You can set the following properties to `true` to enable fetching additional inf
 | Name                  |        Type         | Default | Description                                                                                                                                                                                                                                                                                                                           |
 | --------------------- | :-----------------: | :-----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `fetch_status`        |      `boolean`      | `false` | fetch the local changes                                                                                                                                                                                                                                                                                                               |
+| `fetch_push_status`   |      `boolean`      | `false` | fetch the push-remote ahead/behind information. Requires `fetch_status` to be enabled                                                                                                                                                                                                                                                 |
 | `ignore_status`       |     `[]string`      |         | do not fetch status for these repo's. Uses the repo's root folder and same logic as the [exclude_folders][exclude_folders] property                                                                                                                                                                                                   |
 | `fetch_upstream_icon` |      `boolean`      | `false` | fetch upstream icon                                                                                                                                                                                                                                                                                                                   |
 | `fetch_bare_info`     |      `boolean`      | `false` | fetch bare repo info                                                                                                                                                                                                                                                                                                                  |
@@ -63,21 +64,20 @@ You can set the following properties to `true` to enable fetching additional inf
 | `status_formats`      | `map[string]string` |         | a key, value map allowing to override how individual status items are displayed. For example, `"status_formats": { "Added": "Added: %d" }` will display the added count as `Added: 1` instead of `+1`. See the [Status](#status) section for available overrides.                                                                     |
 | `source`              |      `string`       |  `cli`  | <ul><li>`cli`: fetch the information using the git CLI</li><li>`pwsh`: fetch the information from the [posh-git][poshgit] PowerShell Module</li></ul>                                                                                                                                                                                 |
 | `mapped_branches`     |      `object`       |         | custom glyph/text for specific branches. You can use `*` at the end as a wildcard character for matching                                                                                                                                                                                                                              |
-| `full_branch_path`    |       `bool`        | `true`  | display the full branch path instead of only the last part (e.g. `feature/branch` instead of `branch`)                                                                                                                                                                                                                                |
+| `branch_template`     |      `string`       |         | a [template][templates] to format that branch name. You can use `{{ .Branch }}` as reference to the original branch name                                                                                                                                                                                                              |
+| `disable_with_jj`     |      `boolean`      | `false` | disable the git segment in case of a [Jujutsu] collocated repository                                                                                                                                                                                                                                                                  |
 
 ### Icons
 
 #### Branch
 
-| Name                    |   Type   | Default  | Description                                                                |
-| ----------------------- | :------: | :------: | -------------------------------------------------------------------------- |
-| `branch_icon`           | `string` | `\uE0A0` | the icon to use in front of the git branch name                            |
-| `branch_identical_icon` | `string` | `\u2261` | the icon to display when remote and local are identical                    |
-| `branch_ahead_icon`     | `string` | `\u2191` | the icon to display when the local branch is ahead of its remote           |
-| `branch_behind_icon`    | `string` | `\u2193` | the icon to display when the local branch is behind its remote             |
-| `branch_gone_icon`      | `string` | `\u2262` | the icon to display when there's no remote branch                          |
-| `branch_max_length`     |  `int`   |   `0`    | the max length for the displayed branch name where `0` implies full length |
-| `truncate_symbol`       | `string` |          | the icon to display when a branch name is truncated                        |
+| Name                    |   Type   | Default  | Description                                                      |
+| ----------------------- | :------: | :------: | ---------------------------------------------------------------- |
+| `branch_icon`           | `string` | `\uE0A0` | the icon to use in front of the git branch name                  |
+| `branch_identical_icon` | `string` | `\u2261` | the icon to display when remote and local are identical          |
+| `branch_ahead_icon`     | `string` | `\u2191` | the icon to display when the local branch is ahead of its remote |
+| `branch_behind_icon`    | `string` | `\u2193` | the icon to display when the local branch is behind its remote   |
+| `branch_gone_icon`      | `string` | `\u2262` | the icon to display when there's no remote branch                |
 
 #### HEAD
 
@@ -125,16 +125,19 @@ You can set the following properties to `true` to enable fetching additional inf
 | `.Ref`           | `string`  | the current HEAD reference (branch/tag/...)                                                                                      |
 | `.Behind`        | `int`     | commits behind of upstream                                                                                                       |
 | `.Ahead`         | `int`     | commits ahead of upstream                                                                                                        |
+| `.PushBehind`    | `int`     | commits behind of push remote                                                                                                    |
+| `.PushAhead`     | `int`     | commits ahead of push remote                                                                                                     |
 | `.BranchStatus`  | `string`  | the current branch context (ahead/behind string representation)                                                                  |
 | `.Upstream`      | `string`  | the upstream name (remote)                                                                                                       |
 | `.UpstreamGone`  | `boolean` | whether the upstream is gone (no remote)                                                                                         |
-| `.UpstreamIcon`  | `string`  | the upstream icon (based on the icons above)                                                                                     |
+| `.UpstreamIcon`  | `string`  | the upst ream icon (based on the icons above)                                                                                    |
 | `.UpstreamURL`   | `string`  | the upstream URL for use in [hyperlinks][hyperlinks] in templates: `{{ url .UpstreamIcon .UpstreamURL }}`                        |
 | `.StashCount`    | `int`     | the stash count                                                                                                                  |
 | `.WorktreeCount` | `int`     | the worktree count                                                                                                               |
 | `.IsWorkTree`    | `boolean` | if in a worktree repo or not                                                                                                     |
 | `.IsBare`        | `boolean` | if in a bare repo or not, only set when `fetch_bare_info` is set to `true`                                                       |
 | `.Dir`           | `string`  | the repository's root directory                                                                                                  |
+| `.RelativeDir`   | `string`  | the current directory relative to the root directory                                                                             |
 | `.Kraken`        | `string`  | a link to the current HEAD in [GitKraken][kraken-ref] for use in [hyperlinks][hyperlinks] in templates `{{ url .HEAD .Kraken }}` |
 | `.Commit`        | `Commit`  | HEAD commit information (see below)                                                                                              |
 | `.Detached`      | `boolean` | true when the head is detached                                                                                                   |
@@ -237,3 +240,4 @@ You can then use the `POSH_GIT_STRING` environment variable in a [text segment][
 [kraken-ref]: https://www.gitkraken.com/invite/nQmDPR9D
 [text]: /docs/segments/system/text
 [exclude_folders]: /docs/configuration/segment#include--exclude-folders
+[Jujutsu]: https://jj-vcs.github.io/jj/latest/

@@ -1,11 +1,11 @@
 package template
 
 import (
-	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/jandedobbeleer/oh-my-posh/src/build"
 	"github.com/jandedobbeleer/oh-my-posh/src/cache"
 	"github.com/jandedobbeleer/oh-my-posh/src/log"
 	"github.com/jandedobbeleer/oh-my-posh/src/maps"
@@ -17,10 +17,10 @@ var (
 	Cache *cache.Template
 )
 
-func loadCache(vars maps.Simple) {
+func loadCache(vars maps.Simple[any], aliases *maps.Config) {
 	if !env.Flags().IsPrimary {
 		// Load the template cache for a non-primary prompt before rendering any templates.
-		if OK := restoreCache(env); OK {
+		if OK := restoreCache(); OK {
 			return
 		}
 	}
@@ -28,14 +28,15 @@ func loadCache(vars maps.Simple) {
 	Cache = new(cache.Template)
 
 	Cache.Root = env.Root()
-	Cache.Shell = env.Shell()
+	Cache.Shell = aliases.GetShellName(env.Shell())
 	Cache.ShellVersion = env.Flags().ShellVersion
 	Cache.Code, _ = env.StatusCodes()
 	Cache.WSL = env.IsWsl()
-	Cache.Segments = maps.NewConcurrent()
+	Cache.Segments = maps.NewConcurrent[any]()
 	Cache.PromptCount = env.Flags().PromptCount
 	Cache.Var = make(map[string]any)
 	Cache.Jobs = env.Flags().JobCount
+	Cache.Version = build.Version
 
 	if vars != nil {
 		Cache.Var = vars
@@ -57,9 +58,9 @@ func loadCache(vars maps.Simple) {
 		Cache.Folder += `\`
 	}
 
-	Cache.UserName = env.User()
+	Cache.UserName = aliases.GetUserName(env.User())
 	if host, err := env.Host(); err == nil {
-		Cache.HostName = host
+		Cache.HostName = aliases.GetHostName(host)
 	}
 
 	goos := env.GOOS()
@@ -74,22 +75,16 @@ func loadCache(vars maps.Simple) {
 	}
 }
 
-func restoreCache(env runtime.Environment) bool {
+func restoreCache() bool {
 	defer log.Trace(time.Now())
 
-	val, OK := env.Session().Get(cache.TEMPLATECACHE)
+	val, OK := cache.Get[cache.SimpleTemplate](cache.Session, cache.TEMPLATECACHE)
 	if !OK {
 		return false
 	}
 
-	var tmplCache cache.Template
-	err := json.Unmarshal([]byte(val), &tmplCache)
-	if err != nil {
-		log.Error(err)
-		return false
-	}
-
-	Cache = &tmplCache
+	Cache = new(cache.Template)
+	Cache.SimpleTemplate = val
 	Cache.Segments = Cache.SegmentsCache.ToConcurrent()
 
 	return true
@@ -105,8 +100,5 @@ func SaveCache() {
 
 	Cache.SegmentsCache = Cache.Segments.ToSimple()
 
-	templateCache, err := json.Marshal(Cache)
-	if err == nil {
-		env.Session().Set(cache.TEMPLATECACHE, string(templateCache), cache.ONEDAY)
-	}
+	cache.Set(cache.Session, cache.TEMPLATECACHE, &Cache.SimpleTemplate, cache.ONEDAY)
 }

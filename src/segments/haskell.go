@@ -5,7 +5,7 @@ import (
 )
 
 type Haskell struct {
-	language
+	Language
 
 	StackGhc bool
 }
@@ -38,15 +38,15 @@ func (h *Haskell) Enabled() bool {
 
 	switch h.props.GetString(StackGhcMode, "never") {
 	case "always":
-		h.language.commands = []*cmd{stackGhcCmd}
+		h.commands = []*cmd{stackGhcCmd}
 		h.StackGhc = true
 	case "package":
-		_, err := h.language.env.HasParentFilePath("stack.yaml", false)
+		_, err := h.env.HasParentFilePath("stack.yaml", false)
 		if err == nil {
-			h.language.commands = []*cmd{stackGhcCmd}
+			h.commands = []*cmd{stackGhcCmd}
 			h.StackGhc = true
 		}
 	}
 
-	return h.language.Enabled()
+	return h.Language.Enabled()
 }

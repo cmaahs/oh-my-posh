@@ -18,21 +18,21 @@ jobs:
     runs-on: ubuntu-latest
     name: Build and Deploy
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
         with:
           submodules: true
           persist-credentials: false
       - name: Install Go 🗳
         uses: ./.github/workflows/composite/bootstrap-go
       - name: Setup Node.js
-        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903
         with:
           node-version: 20.9.0
         # Create Kind cluster to have a Kubernetes context for cloud-native-azure theme
         # Images are defined on every Kind release
         # See https://github.com/kubernetes-sigs/kind/releases
       - name: Create k8s v1.23 Kind Cluster
-        uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3
+        uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab
         with:
           node_image: kindest/node:v1.23.4@sha256:0e34f0d0fd448aa2f2819cfd74e99fe5793a6e4938b328f657c8e3f81ee0dfb9
           cluster_name: posh
@@ -42,7 +42,7 @@ jobs:
       - name: Set default Kubernetes namespace
         run: |
           kubectl config set-context posh --namespace demo
-      - uses: azure/login@a65d910e8af852a8061c627c456678983e180302
+      - uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Build oh-my-posh 🔧
@@ -57,6 +57,11 @@ jobs:
           npm install
           npm run themes
           cd ..
+      - name: Copy schema for MCP validator 📋
+        run: |
+          mkdir -p website/api/data
+          cp themes/schema.json website/api/data/schema.json
+          echo "✅ Copied schema.json to website/api/data/"
       - name: Build Docs And Deploy 🚀
         id: builddeploy
         uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9

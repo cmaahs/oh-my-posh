@@ -2,11 +2,11 @@ package cli
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/cache"
 	"github.com/jandedobbeleer/oh-my-posh/src/config"
-	"github.com/jandedobbeleer/oh-my-posh/src/runtime"
 
 	"github.com/spf13/cobra"
 )
@@ -17,12 +17,13 @@ var (
 	toggleArgs = []string{
 		config.UPGRADENOTICE,
 		config.AUTOUPGRADE,
+		config.RELOAD,
 	}
 	toggleUse  = fmt.Sprintf("%%s [%s]", strings.Join(toggleArgs, "|"))
 	toggleLong = strings.Join(append([]string{toggleHelpText}, toggleArgs...), "\n- ")
 )
 
-// getCmd represents the get command
+// enableCmd represents the enable command
 var enableCmd = &cobra.Command{
 	Use:       fmt.Sprintf(toggleUse, "enable"),
 	Short:     "Enable a feature",
@@ -43,24 +44,12 @@ func init() {
 }
 
 func toggleFeature(cmd *cobra.Command, feature string, enable bool) {
-	flags := &runtime.Flags{
-		Shell:     shellName,
-		SaveCache: true,
-	}
-
-	env := &runtime.Terminal{}
-	env.Init(flags)
-	defer env.Close()
-
-	if len(feature) == 0 {
+	if feature == "" {
 		_ = cmd.Help()
 		return
 	}
 
-	if enable {
-		env.Cache().Set(feature, "true", cache.INFINITE)
-		return
-	}
-
-	env.Cache().Delete(feature)
+	cache.Init(os.Getenv("POSH_SHELL"), cache.Persist)
+	cache.Set(cache.Device, feature, enable, cache.INFINITE)
+	cache.Close()
 }

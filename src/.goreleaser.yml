@@ -5,7 +5,7 @@ before:
   hooks:
     - go mod tidy
     - go install github.com/tc-hib/go-winres@latest
-    - go-winres make --product-version=git-tag --file-version=git-tag --arch="amd64,386,arm64"
+    - go-winres make --product-version=git-tag --file-version=git-tag --arch="amd64,arm64"
 builds:
   -
     binary: "posh-{{ .Os }}-{{ .Arch }}"
@@ -24,6 +24,7 @@ builds:
       - timetzdata
     env:
       - CGO_ENABLED=0
+      - GOEXPERIMENT=greenteagc,jsonv2
     goos:
       - linux
       - windows
@@ -33,10 +34,7 @@ builds:
       - amd64
       - arm64
       - arm
-      - "386"
     ignore:
-      - goos: darwin
-        goarch: "386"
       - goos: darwin
         goarch: arm
       - goos: windows

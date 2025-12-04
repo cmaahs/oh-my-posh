@@ -15,7 +15,7 @@ import (
 
 // segment struct, makes templating easier
 type Brewfather struct {
-	base
+	Base
 
 	DaysBottledOrFermented *uint
 	TemperatureTrendIcon   string
@@ -95,8 +95,8 @@ func (bf *Brewfather) Enabled() bool {
 	}
 	bf.Batch = *data
 
-	if bf.Batch.Reading != nil {
-		readingDate := time.UnixMilli(bf.Batch.Reading.Time)
+	if bf.Reading != nil {
+		readingDate := time.UnixMilli(bf.Reading.Time)
 		bf.ReadingAge = int(time.Since(readingDate).Hours())
 	} else {
 		bf.ReadingAge = -1
@@ -105,10 +105,10 @@ func (bf *Brewfather) Enabled() bool {
 	bf.TemperatureTrendIcon = bf.getTrendIcon(bf.TemperatureTrend)
 	bf.StatusIcon = bf.getBatchStatusIcon(data.Status)
 
-	fermStartDate := time.UnixMilli(bf.Batch.FermentStartDate)
-	bottlingDate := time.UnixMilli(bf.Batch.BottlingDate)
+	fermStartDate := time.UnixMilli(bf.FermentStartDate)
+	bottlingDate := time.UnixMilli(bf.BottlingDate)
 
-	switch bf.Batch.Status {
+	switch bf.Status {
 	case BFStatusFermenting:
 		// in the fermenter now, so relative to today.
 		bf.DaysFermenting = uint(time.Since(fermStartDate).Hours() / 24)
@@ -189,17 +189,17 @@ func (bf *Brewfather) getBatchStatusIcon(batchStatus string) string {
 
 func (bf *Brewfather) getResult() (*Batch, error) {
 	userID := bf.props.GetString(BFUserID, "")
-	if len(userID) == 0 {
+	if userID == "" {
 		return nil, errors.New("missing Brewfather user id (user_id)")
 	}
 
 	apiKey := bf.props.GetString(APIKey, "")
-	if len(apiKey) == 0 {
+	if apiKey == "" {
 		return nil, errors.New("missing Brewfather api key (api_key)")
 	}
 
 	batchID := bf.props.GetString(BFBatchID, "")
-	if len(batchID) == 0 {
+	if batchID == "" {
 		return nil, errors.New("missing Brewfather batch id (batch_id)")
 	}
 

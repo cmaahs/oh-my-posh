@@ -9,7 +9,7 @@ import (
 //go:embed scripts/omp.ps1
 var pwshInit string
 
-func (f Feature) Pwsh() Code {
+func (f Features) Pwsh() Code {
 	switch f {
 	case Tooltips:
 		return "Enable-PoshTooltips"
@@ -26,10 +26,10 @@ func (f Feature) Pwsh() Code {
 	case FTCSMarks:
 		return "$global:_ompFTCSMarks = $true"
 	case Upgrade:
-		return "& $global:_ompExecutable upgrade"
+		return "& $global:_ompExecutable upgrade --auto"
 	case Notice:
 		return "& $global:_ompExecutable notice"
-	case PromptMark, RPrompt, CursorPositioning:
+	case PromptMark, RPrompt, CursorPositioning, Async:
 		fallthrough
 	default:
 		return ""
@@ -37,7 +37,7 @@ func (f Feature) Pwsh() Code {
 }
 
 func quotePwshOrElvishStr(str string) string {
-	if len(str) == 0 {
+	if str == "" {
 		return "''"
 	}
 

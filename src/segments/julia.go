@@ -1,7 +1,7 @@
 package segments
 
 type Julia struct {
-	language
+	Language
 }
 
 func (j *Julia) Template() string {
@@ -19,5 +19,5 @@ func (j *Julia) Enabled() bool {
 	}
 	j.versionURLTemplate = "https://github.com/JuliaLang/julia/releases/tag/v{{ .Full }}"
 
-	return j.language.Enabled()
+	return j.Language.Enabled()
 }

@@ -1,7 +1,7 @@
 package segments
 
 type XMake struct {
-	language
+	Language
 }
 
 func (x *XMake) Template() string {
@@ -18,5 +18,5 @@ func (x *XMake) Enabled() bool {
 		},
 	}
 
-	return x.language.Enabled()
+	return x.Language.Enabled()
 }

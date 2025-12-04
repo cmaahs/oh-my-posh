@@ -73,7 +73,7 @@ func TestUI5Tooling(t *testing.T) {
 		}
 		env, props := getMockedLanguageEnv(params)
 
-		if len(tc.DisplayMode) == 0 {
+		if tc.DisplayMode == "" {
 			tc.DisplayMode = DisplayModeContext
 		}
 
@@ -88,14 +88,14 @@ func TestUI5Tooling(t *testing.T) {
 			t.Fail()
 		}
 
-		if len(tc.Template) == 0 {
+		if tc.Template == "" {
 			tc.Template = ui5tooling.Template()
 		}
 
 		// this is needed to build the version URL as before renderTemplate, the template is not initialized
 		env.On("Shell").Return("foo")
 		template.Cache = &cache.Template{}
-		template.Init(env, nil)
+		template.Init(env, nil, nil)
 
 		failMsg := fmt.Sprintf("Failed in case: %s", tc.Case)
 		assert.True(t, ui5tooling.Enabled(), failMsg)

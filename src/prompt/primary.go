@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jandedobbeleer/oh-my-posh/src/cache"
 	"github.com/jandedobbeleer/oh-my-posh/src/config"
 	"github.com/jandedobbeleer/oh-my-posh/src/shell"
 	"github.com/jandedobbeleer/oh-my-posh/src/terminal"
@@ -72,6 +73,13 @@ func (e *Engine) writePrimaryPrompt(needsPrimaryRPrompt bool) {
 		if e.renderBlock(block, cancelNewline) {
 			didRender = true
 		}
+
+		if e.Config.ToolTipsAction.IsDefault() {
+			continue
+		}
+
+		cache.Set(cache.Session, RPromptKey, e.rprompt, cache.INFINITE)
+		cache.Set(cache.Session, RPromptLengthKey, e.rpromptLength, cache.INFINITE)
 	}
 
 	if len(e.Config.ConsoleTitleTemplate) > 0 && !e.Env.Flags().Plain {
@@ -102,7 +110,7 @@ func (e *Engine) needsPrimaryRightPrompt() bool {
 	}
 
 	switch e.Env.Shell() {
-	case shell.PWSH, shell.PWSH5, shell.GENERIC, shell.ZSH:
+	case shell.PWSH, shell.GENERIC, shell.ZSH:
 		return true
 	default:
 		return false

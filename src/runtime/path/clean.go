@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/regex"
+	"github.com/jandedobbeleer/oh-my-posh/src/text"
 )
 
 // Base returns the last element of path.
@@ -19,7 +20,7 @@ func Base(input string) string {
 		input = input[0 : len(input)-1]
 	}
 
-	if len(input) == 0 {
+	if input == "" {
 		return Separator()
 	}
 
@@ -40,7 +41,7 @@ func Base(input string) string {
 	}
 
 	// If empty now, it had only slashes.
-	if len(input) == 0 {
+	if input == "" {
 		return Separator()
 	}
 
@@ -48,7 +49,7 @@ func Base(input string) string {
 }
 
 func Clean(input string) string {
-	if len(input) == 0 {
+	if input == "" {
 		return input
 	}
 
@@ -68,18 +69,21 @@ func Clean(input string) string {
 		// Clean the prefix for a UNC path, if any.
 		if regex.MatchString(`^\\{2}[^\\]+`, cleaned) {
 			cleaned = strings.TrimPrefix(cleaned, `\\.\UNC\`)
-			if len(cleaned) == 0 {
+			if cleaned == "" {
 				return cleaned
 			}
 			prefix = `\\`
 		}
 
 		// Always use an uppercase drive letter on Windows.
-		driveLetter := regex.GetCompiledRegex(`^[a-z]:`)
-		cleaned = driveLetter.ReplaceAllStringFunc(cleaned, strings.ToUpper)
+		driveLetter, err := regex.GetCompiledRegex(`^[a-z]:`)
+		if err == nil {
+			cleaned = driveLetter.ReplaceAllStringFunc(cleaned, strings.ToUpper)
+		}
 	}
 
-	sb := new(strings.Builder)
+	sb := text.NewBuilder()
+
 	sb.WriteString(prefix)
 
 	// Clean slashes.
@@ -102,7 +106,7 @@ func ReplaceHomeDirPrefixWithTilde(path string) string {
 	}
 
 	rem := path[len(home):]
-	if len(rem) == 0 || IsSeparator(rem[0]) {
+	if rem == "" || IsSeparator(rem[0]) {
 		return "~" + rem
 	}
 
@@ -115,7 +119,7 @@ func ReplaceTildePrefixWithHomeDir(path string) string {
 	}
 
 	rem := path[1:]
-	if len(rem) == 0 || IsSeparator(rem[0]) {
+	if rem == "" || IsSeparator(rem[0]) {
 		return Home() + rem
 	}
 

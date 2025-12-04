@@ -25,17 +25,17 @@ const (
 )
 
 type Pulumi struct {
-	base
+	Base
 
 	Stack string
 	Name  string
 
 	workspaceSHA1 string
 
-	backend
+	Backend
 }
 
-type backend struct {
+type Backend struct {
 	URL  string `json:"url"`
 	User string `json:"user"`
 }
@@ -75,7 +75,7 @@ func (p *Pulumi) Enabled() bool {
 }
 
 func (p *Pulumi) getPulumiStackName() {
-	if len(p.Name) == 0 || len(p.workspaceSHA1) == 0 {
+	if p.Name == "" || p.workspaceSHA1 == "" {
 		log.Debug("pulumi project name or workspace sha1 is empty")
 		return
 	}
@@ -112,7 +112,7 @@ func (p *Pulumi) getProjectName() error {
 		}
 	}
 
-	if len(kind) == 0 {
+	if kind == "" {
 		return fmt.Errorf("no pulumi spec file found")
 	}
 
@@ -155,7 +155,7 @@ func (p *Pulumi) sha1HexString(s string) string {
 }
 
 func (p *Pulumi) getPulumiAbout() {
-	if len(p.Stack) == 0 {
+	if p.Stack == "" {
 		log.Error(fmt.Errorf("pulumi stack name is empty, use `fetch_stack` property to enable stack fetching"))
 		return
 	}
@@ -168,7 +168,7 @@ func (p *Pulumi) getPulumiAbout() {
 	}
 
 	var about struct {
-		Backend *backend `json:"backend"`
+		Backend *Backend `json:"backend"`
 	}
 
 	err = json.Unmarshal([]byte(aboutOutput), &about)
@@ -182,5 +182,5 @@ func (p *Pulumi) getPulumiAbout() {
 		return
 	}
 
-	p.backend = *about.Backend
+	p.Backend = *about.Backend
 }

@@ -1,7 +1,7 @@
 package segments
 
 type OCaml struct {
-	language
+	Language
 }
 
 func (o *OCaml) Template() string {
@@ -18,5 +18,5 @@ func (o *OCaml) Enabled() bool {
 		},
 	}
 
-	return o.language.Enabled()
+	return o.Language.Enabled()
 }

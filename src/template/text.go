@@ -4,76 +4,80 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
+	"sync"
+	"unicode"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/log"
-	"github.com/jandedobbeleer/oh-my-posh/src/regex"
 )
 
 type Text struct {
-	Context  Data
-	Template string
+	context  Data
+	template string
 }
 
-func (t *Text) Render() (string, error) {
-	defer log.Trace(time.Now(), t.Template)
+// New returns a Text instance from the pool with the given template and context
+func get(template string, context any) *Text {
+	if textPool == nil {
+		// Fallback if pool is not initialized yet
+		return &Text{context: context, template: template}
+	}
 
-	if !strings.Contains(t.Template, "{{") || !strings.Contains(t.Template, "}}") {
-		return t.Template, nil
+	text := textPool.Get()
+	text.template = template
+	text.context = context
+
+	return text
+}
+
+func Render(template string, context any) (string, error) {
+	t := get(template, context)
+	defer t.release()
+
+	if !strings.Contains(t.template, "{{") || !strings.Contains(t.template, "}}") {
+		return t.template, nil
 	}
 
 	t.patchTemplate()
 
-	renderer := renderPool.Get().(*renderer)
+	renderer := renderPool.Get()
 	defer renderer.release()
 
 	return renderer.execute(t)
 }
 
-func (t *Text) patchTemplate() {
-	isKnownVariable := func(variable string) bool {
-		variable = strings.TrimPrefix(variable, ".")
-		splitted := strings.Split(variable, ".")
+// Release resets the Text instance and returns it to the pool
+func (t *Text) release() {
+	t.context = nil
+	t.template = ""
 
-		if len(splitted) == 0 {
-			return true
-		}
-
-		variable = splitted[0]
-		// check if alphanumeric
-		if !regex.MatchString(`^[a-zA-Z0-9]+$`, variable) {
-			return true
-		}
-
-		for _, b := range knownVariables {
-			if variable == b {
-				return true
-			}
-		}
-
-		return false
+	if textPool != nil {
+		textPool.Put(t)
 	}
+}
 
-	fields := make(fields)
-	fields.init(t.Context)
+func (t *Text) patchTemplate() {
+	fields := &fields{}
+	fields.init(t.context)
 
 	var result, property string
 	var inProperty, inTemplate bool
-	for i, char := range t.Template {
+	for i, char := range t.template {
 		// define start or end of template
 		if !inTemplate && char == '{' {
-			if i-1 >= 0 && rune(t.Template[i-1]) == '{' {
+			if i-1 >= 0 && rune(t.template[i-1]) == '{' {
 				inTemplate = true
 			}
 		} else if inTemplate && char == '}' {
-			if i-1 >= 0 && rune(t.Template[i-1]) == '}' {
+			if i-1 >= 0 && rune(t.template[i-1]) == '}' {
 				inTemplate = false
 			}
 		}
+
 		if !inTemplate {
 			result += string(char)
 			continue
 		}
+
 		switch char {
 		case '.':
 			var lastChar rune
@@ -96,15 +100,19 @@ func (t *Text) patchTemplate() {
 			}
 
 			switch {
-			case !isKnownVariable(property):
-				// end of a variable, needs to be appended
-				result += ".Data" + property
 			case strings.HasPrefix(property, ".Segments") && !strings.HasSuffix(property, ".Contains"):
 				// as we can't provide a clean way to access the list
 				// of segments, we need to replace the property with
 				// the list of segments so they can be accessed directly
-				property = strings.Replace(property, ".Segments", ".Segments.ToSimple", 1)
+				parts := strings.Split(property, ".")
+				if len(parts) > 3 {
+					property = fmt.Sprintf(`(.Segments.MustGet "%s").%s`, parts[2], strings.Join(parts[3:], "."))
+				} else {
+					property = fmt.Sprintf(`(.Segments.MustGet "%s")`, parts[2])
+				}
 				result += property
+				// property = strings.Replace(property, ".Segments", ".Segments.ToSimple", 1)
+				// result += property
 			case strings.HasPrefix(property, ".Env."):
 				// we need to replace the property with the getEnv function
 				// so we can access the environment variables directly
@@ -136,38 +144,125 @@ func (t *Text) patchTemplate() {
 	}
 
 	// return the result and remaining unresolved property
-	t.Template = result + property
+	t.template = result + property
+
+	log.Debug(t.template)
 }
 
-type fields map[string]bool
+type fields struct {
+	values map[string]bool
+	sync.RWMutex
+}
 
 func (f *fields) init(data any) {
 	if data == nil {
 		return
 	}
 
+	if f.values == nil {
+		f.values = make(map[string]bool)
+	}
+
 	val := reflect.TypeOf(data)
 	switch val.Kind() { //nolint:exhaustive
 	case reflect.Struct:
-		fieldsNum := val.NumField()
-		for i := 0; i < fieldsNum; i++ {
-			(*f)[val.Field(i).Name] = true
+		name := val.Name()
+
+		// check if we already know the fields of this struct
+		if kf, OK := knownFields.Load(name); OK {
+			f.append(kf)
+			return
 		}
+
+		// Get struct fields and check embedded types
+		fieldsNum := val.NumField()
+		for i := range fieldsNum {
+			field := val.Field(i)
+			f.add(field.Name)
+
+			// If this is an embedded field, get its methods too
+			if !field.Anonymous {
+				continue
+			}
+
+			embeddedType := field.Type
+
+			// Recursively check if the embedded type is also a struct
+			if embeddedType.Kind() == reflect.Struct {
+				f.init(reflect.New(embeddedType).Elem().Interface())
+			}
+		}
+
+		// Get pointer methods
+		ptrType := reflect.PointerTo(val)
+		methodsNum := ptrType.NumMethod()
+		for i := range methodsNum {
+			f.add(ptrType.Method(i).Name)
+		}
+
+		knownFields.Store(name, f)
 	case reflect.Map:
 		m, ok := data.(map[string]any)
 		if !ok {
 			return
 		}
 		for key := range m {
-			(*f)[key] = true
+			f.add(key)
 		}
 	case reflect.Ptr:
 		f.init(reflect.ValueOf(data).Elem().Interface())
 	}
 }
 
-func (f fields) hasField(field string) bool {
+func (f *fields) append(values any) {
+	if values == nil {
+		return
+	}
+
+	fields, ok := values.(*fields)
+	if !ok {
+		return
+	}
+
+	f.Lock()
+	fields.RLock()
+
+	defer func() {
+		f.Unlock()
+		fields.RUnlock()
+	}()
+
+	for key := range fields.values {
+		f.values[key] = true
+	}
+}
+
+func (f *fields) add(field string) {
+	if field == "" {
+		return
+	}
+
+	r := []rune(field)[0]
+	if !unicode.IsUpper(r) {
+		return
+	}
+
+	f.Lock()
+	defer f.Unlock()
+
+	f.values[field] = true
+}
+
+func (f *fields) hasField(field string) bool {
 	field = strings.TrimPrefix(field, ".")
-	_, ok := f[field]
+
+	// get the first part of the field
+	splitted := strings.Split(field, ".")
+	field = splitted[0]
+
+	f.RLock()
+	defer f.RUnlock()
+
+	_, ok := f.values[field]
 	return ok
 }

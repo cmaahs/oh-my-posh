@@ -25,15 +25,10 @@ func TestGlob(t *testing.T) {
 	env.On("Shell").Return("foo")
 
 	Cache = new(cache.Template)
-	Init(env, nil)
+	Init(env, nil, nil)
 
 	for _, tc := range cases {
-		tmpl := &Text{
-			Template: tc.Template,
-			Context:  nil,
-		}
-
-		text, err := tmpl.Render()
+		text, err := Render(tc.Template, nil)
 		if tc.ShouldError {
 			assert.Error(t, err)
 			continue

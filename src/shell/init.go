@@ -6,14 +6,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/jandedobbeleer/oh-my-posh/src/cache"
 	"github.com/jandedobbeleer/oh-my-posh/src/log"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/path"
+	"github.com/jandedobbeleer/oh-my-posh/src/text"
 )
 
 const (
 	noExe = "echo \"Unable to find Oh My Posh executable\""
+)
+
+var (
+	// identify ble.sh by validating the existence of BLE_SESSION_ID
+	bashBLEsession bool
 )
 
 func getExecutablePath(env runtime.Environment) (string, error) {
@@ -22,7 +28,8 @@ func getExecutablePath(env runtime.Environment) (string, error) {
 		return "", err
 	}
 
-	if env.Flags().Strict {
+	_, msix := cache.PackageFamilyName()
+	if msix || env.Flags().Strict {
 		return path.Base(executable), nil
 	}
 
@@ -37,127 +44,205 @@ func getExecutablePath(env runtime.Environment) (string, error) {
 }
 
 func Init(env runtime.Environment, feats Features) string {
-	shell := env.Flags().Shell
+	switch env.Flags().Shell {
+	case ELVISH, PWSH:
+		if env.Flags().Shell != ELVISH && !env.Flags().Eval {
+			return PrintInit(env, feats, nil)
+		}
 
-	switch shell {
-	case PWSH, PWSH5, ELVISH:
 		executable, err := getExecutablePath(env)
 		if err != nil {
 			return noExe
 		}
 
 		var additionalParams string
+
 		if env.Flags().Strict {
 			additionalParams += " --strict"
 		}
 
-		var command, config string
+		if env.Flags().Eval {
+			additionalParams += " --eval"
+		}
 
-		switch shell {
-		case PWSH, PWSH5:
+		config := quotePwshOrElvishStr(env.Flags().ConfigPath)
+		executable = quotePwshOrElvishStr(executable)
+
+		var command string
+
+		switch env.Flags().Shell {
+		case PWSH:
 			command = "(@(& %s init %s --config=%s --print%s) -join \"`n\") | Invoke-Expression"
 		case ELVISH:
 			command = "eval ((external %s) init %s --config=%s --print%s | slurp)"
 		}
 
-		config = quotePwshOrElvishStr(env.Flags().Config)
-		executable = quotePwshOrElvishStr(executable)
-
-		return fmt.Sprintf(command, executable, shell, config, additionalParams)
-	case ZSH, BASH, FISH, CMD, TCSH, XONSH:
+		return fmt.Sprintf(command, executable, env.Flags().Shell, config, additionalParams)
+	case ZSH, BASH, FISH, CMD, XONSH, NU:
 		return PrintInit(env, feats, nil)
-	case NU:
-		createNuInit(env, feats)
-		return ""
 	default:
-		return fmt.Sprintf(`echo "%s is not supported by Oh My Posh"`, shell)
+		return fmt.Sprintf(`echo "%s is not supported by Oh My Posh"`, env.Flags().Shell)
 	}
 }
 
 func PrintInit(env runtime.Environment, features Features, startTime *time.Time) string {
+	async := features&Async != 0
+
+	if scriptPath, OK := hasScript(env); OK {
+		return sourceInit(env, scriptPath, async)
+	}
+
 	executable, err := getExecutablePath(env)
 	if err != nil {
 		return noExe
 	}
 
-	shell := env.Flags().Shell
-	configFile := env.Flags().Config
-	sessionID := uuid.NewString()
+	bashBLEsession = len(env.Getenv("BLE_SESSION_ID")) != 0
 
 	var script string
 
-	switch shell {
-	case PWSH, PWSH5:
+	switch env.Flags().Shell {
+	case PWSH:
 		executable = quotePwshOrElvishStr(executable)
-		configFile = quotePwshOrElvishStr(configFile)
-		sessionID = quotePwshOrElvishStr(sessionID)
 		script = pwshInit
 	case ZSH:
 		executable = QuotePosixStr(executable)
-		configFile = QuotePosixStr(configFile)
-		sessionID = QuotePosixStr(sessionID)
 		script = zshInit
 	case BASH:
 		executable = QuotePosixStr(executable)
-		configFile = QuotePosixStr(configFile)
-		sessionID = QuotePosixStr(sessionID)
 		script = bashInit
 	case FISH:
 		executable = quoteFishStr(executable)
-		configFile = quoteFishStr(configFile)
-		sessionID = quoteFishStr(sessionID)
 		script = fishInit
 	case CMD:
 		executable = escapeLuaStr(executable)
-		configFile = escapeLuaStr(configFile)
-		sessionID = escapeLuaStr(sessionID)
 		script = cmdInit
 	case NU:
 		executable = quoteNuStr(executable)
-		configFile = quoteNuStr(configFile)
-		sessionID = quoteNuStr(sessionID)
 		script = nuInit
-	case TCSH:
-		executable = quoteCshStr(executable)
-		configFile = quoteCshStr(configFile)
-		sessionID = quoteCshStr(sessionID)
-		script = tcshInit
 	case ELVISH:
 		executable = quotePwshOrElvishStr(executable)
-		configFile = quotePwshOrElvishStr(configFile)
-		sessionID = quotePwshOrElvishStr(sessionID)
 		script = elvishInit
 	case XONSH:
 		executable = quotePythonStr(executable)
-		configFile = quotePythonStr(configFile)
-		sessionID = quotePythonStr(sessionID)
 		script = xonshInit
 	default:
-		return fmt.Sprintf("echo \"No initialization script available for %s\"", shell)
+		return fmt.Sprintf("echo \"No initialization script available for %s\"", env.Flags().Shell)
 	}
 
 	init := strings.NewReplacer(
 		"::OMP::", executable,
-		"::CONFIG::", configFile,
-		"::SHELL::", shell,
-		"::SESSION_ID::", sessionID,
+		"::SESSION_ID::", cache.SessionID(),
 	).Replace(script)
 
-	shellScript := features.Lines(shell).String(init)
+	shellScript := features.Lines(env.Flags().Shell).String(init)
 
-	if !env.Flags().Debug {
-		return shellScript
+	if env.Flags().Eval {
+		return fmt.Sprintf("%s\n%s", sessionScript(env.Flags().Shell), shellScript)
 	}
 
-	var builder strings.Builder
+	log.Debug(shellScript)
+
+	scriptPath, err := writeScript(env, shellScript)
+	if err != nil {
+		return fmt.Sprintf("echo \"Failed to write init script: %s\"", err.Error())
+	}
+
+	sourceCommand := sourceInit(env, scriptPath, async)
+
+	if !env.Flags().Debug {
+		return sourceCommand
+	}
+
+	if len(sourceCommand) != 0 {
+		log.Debug("init source command:", sourceCommand)
+	}
+
+	return printDebug(env, startTime)
+}
+
+func printDebug(env runtime.Environment, startTime *time.Time) string {
+	builder := text.NewBuilder()
 
 	builder.WriteString(fmt.Sprintf("\n%s %s\n", log.Text("Init duration:").Green().Bold().Plain(), time.Since(*startTime)))
-
-	builder.WriteString(log.Text("\nScript:\n\n").Green().Bold().Plain().String())
-	builder.WriteString(shellScript)
 
 	builder.WriteString(log.Text("\n\nLogs:\n\n").Green().Bold().Plain().String())
 	builder.WriteString(env.Logs())
 
 	return builder.String()
+}
+
+func sourceInit(env runtime.Environment, scriptPath string, async bool) string {
+	// nushell stores to autoload, no need to return anything
+	if env.Flags().Shell == NU {
+		return ""
+	}
+
+	if env.IsCygwin() {
+		var err error
+		scriptPath, err = env.RunCommand("cygpath", "-u", scriptPath)
+		if err != nil {
+			log.Error(err)
+			return fmt.Sprintf("echo \"Failed to convert Cygwin path due to %s\"", err.Error())
+		}
+	}
+
+	script := sessionScript(env.Flags().Shell)
+
+	if async {
+		return script + sourceInitAsync(env.Flags().Shell, scriptPath)
+	}
+
+	switch env.Flags().Shell {
+	case PWSH:
+		script += fmt.Sprintf("& %s", quotePwshOrElvishStr(scriptPath))
+	case ZSH, BASH:
+		script += fmt.Sprintf("source %s", QuotePosixStr(scriptPath))
+	case XONSH:
+		script += fmt.Sprintf("source %s", quotePythonStr(scriptPath))
+	case FISH:
+		script += fmt.Sprintf("source %s", quoteFishStr(scriptPath))
+	case ELVISH:
+		script += fmt.Sprintf("eval (slurp < %s)", quotePwshOrElvishStr(scriptPath))
+	case CMD:
+		script += fmt.Sprintf(`load(io.open('%s', "r"):read("*a"))()`, escapeLuaStr(scriptPath))
+	default:
+		return fmt.Sprintf("echo \"No source command available for %s\"", env.Flags().Shell)
+	}
+
+	return script
+}
+
+func sourceInitAsync(shell, scriptPath string) string {
+	switch shell {
+	case PWSH:
+		return fmt.Sprintf("function prompt() { & %s }", quotePwshOrElvishStr(scriptPath))
+	case ZSH:
+		return fmt.Sprintf("precmd() { source %s }", QuotePosixStr(scriptPath))
+	case BASH:
+		command := fmt.Sprintf("source %s", QuotePosixStr(scriptPath))
+		return fmt.Sprintf("PROMPT_COMMAND=%s", QuotePosixStr(command))
+	case FISH:
+		return fmt.Sprintf("function fish_prompt; source %s; end", quoteFishStr(scriptPath))
+	default:
+		return ""
+	}
+}
+
+func sessionScript(shell string) string {
+	switch shell {
+	case PWSH:
+		return fmt.Sprintf("$env:POSH_SESSION_ID = \"%s\";", cache.SessionID())
+	case ZSH, BASH:
+		return fmt.Sprintf("export POSH_SESSION_ID=\"%s\";", cache.SessionID())
+	case XONSH:
+		return fmt.Sprintf("$POSH_SESSION_ID = \"%s\";", cache.SessionID())
+	case FISH:
+		return fmt.Sprintf("set --export --global POSH_SESSION_ID \"%s\";", cache.SessionID())
+	case ELVISH:
+		return fmt.Sprintf("set-env POSH_SESSION_ID \"%s\";", cache.SessionID())
+	case CMD:
+		return fmt.Sprintf(`os.setenv('POSH_SESSION_ID', '%s');`, cache.SessionID())
+	}
+	return ""
 }

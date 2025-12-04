@@ -13,9 +13,11 @@ import (
 )
 
 type Owm struct {
-	base
+	Base
 
 	FeelsLike   string
+	Pressure    int
+	Humidity    int
 	Weather     string
 	URL         string
 	units       string
@@ -36,16 +38,19 @@ const (
 	// Units openweathermap units
 	Units properties.Property = "units"
 	// CacheKeyResponse key used when caching the response
-	CacheKeyResponse string = "owm_response"
+	// CacheKeyResponse string = "owm_response"
 	// CacheKeyURL key used when caching the url responsible for the response
-	CacheKeyURL string = "owm_url"
+	// CacheKeyURL string = "owm_url"
 	// WithUnits is used to swith on an off the units on the individual measurements
 	WithUnits properties.Property = "with_units"
 
 	ImperialIndicator = "°F"
 	MetricIndicator   = "°C"
 	StandardIndicator = "°K"
-	PoshOWMAPIKey     = "POSH_OWM_API_KEY"
+	// Environmental variable to dynamically set the Open Map API key
+	OWMAPIKey string = "POSH_OWM_API_KEY"
+	// Environmental variable to dynamically set the location string
+	OWMLocationKey string = "POSH_OWM_LOCATION"
 )
 
 type weather struct {
@@ -55,14 +60,25 @@ type weather struct {
 	TypeID           string `json:"icon"`
 }
 
-type temperature struct {
-	Value     float64 `json:"temp"`
+// type temperature struct {
+// 	Value     float64 `json:"temp"`
+// 	FeelsLike float64 `json:"feels_like"`
+// }
+
+type main struct {
+	Temp      float64 `json:"temp"`
 	FeelsLike float64 `json:"feels_like"`
+	TempMin   float64 `json:"temp_min"`
+	TempMax   float64 `json:"temp_max"`
+	Pressure  int     `json:"pressure"`
+	Humidity  int     `json:"humidity"`
+	SeaLevel  int     `json:"sea_level"`
+	GrndLevel int     `json:"grnd_level"`
 }
 
 type owmDataResponse struct {
-	Data        []weather `json:"weather"`
-	temperature `json:"main"`
+	Weather []weather `json:"weather"`
+	Main    main      `json:"main"`
 }
 
 func (d *Owm) Enabled() bool {
@@ -83,19 +99,22 @@ func (d *Owm) Template() string {
 func (d *Owm) getResult() (*owmDataResponse, error) {
 	response := new(owmDataResponse)
 
-	apikey := properties.OneOf(d.props, ".", APIKey, "apiKey")
-	if len(apikey) == 0 {
-		apikey = d.env.Getenv(PoshOWMAPIKey)
+	apikey := properties.OneOf(d.props, d.env.Getenv(OWMAPIKey), APIKey, "apiKey")
+	if apikey == "" {
+		apikey = "."
 	}
 
-	apiEnv := d.props.GetString(APIEnv, "")
-	// apikey := d.props.GetString(APIKey, ".")
-	location := d.props.GetString(Location, "De Bilt,NL")
+	if apikey == "" {
+		return nil, errors.New("no api key found")
+	}
+
+	location := d.props.GetString(Location, d.env.Getenv(OWMLocationKey))
+	if location == "" {
+		return nil, errors.New("no location found")
+	}
 	location = url.QueryEscape(location)
 
-	if len(apikey) == 0 || len(location) == 0 {
-		return nil, errors.New("no api key or location found")
-	}
+	apiEnv := d.props.GetString(APIEnv, "")
 
 	units := d.props.GetString(Units, "standard")
 	httpTimeout := d.props.GetInt(properties.HTTPTimeout, properties.DefaultHTTPTimeout)
@@ -127,15 +146,17 @@ func (d *Owm) setStatus() error {
 		return err
 	}
 
-	if len(q.Data) == 0 {
-		return errors.New("No data found")
+	if len(q.Weather) == 0 {
+		return errors.New("no data found")
 	}
-	// id := q.Data[0].TypeID
-	wid := q.Data[0].ID
-	name := q.Data[0].ShortDescription
+	// id := q.Weather[0].TypeID
+	wid := q.Weather[0].ID
+	name := q.Weather[0].ShortDescription
 
-	d.Temperature = int(math.Round(q.temperature.Value))
-	d.FeelsLike = fmt.Sprintf("%d", int(math.Round(q.temperature.FeelsLike)))
+	d.Temperature = int(math.Round(q.Main.Temp))
+	d.Pressure = q.Main.Pressure
+	d.Humidity = q.Main.Humidity
+	d.FeelsLike = fmt.Sprintf("%d", int(math.Round(q.Main.FeelsLike)))
 	icon := "☀️"
 	// switch id {
 	// case "01n":
@@ -211,9 +232,9 @@ func (d *Owm) setStatus() error {
 	switch d.units {
 	case "imperial":
 		d.UnitIcon = ImperialIndicator // "°F" // \ue341"
-		f := int(math.Round(q.temperature.Value))
-		c := convertFahrenheitToCelsius(q.temperature.Value)
-		k := convertFahrenheitToKelvin(q.temperature.Value)
+		f := int(math.Round(q.Main.Temp))
+		c := convertFahrenheitToCelsius(q.Main.Temp)
+		k := convertFahrenheitToKelvin(q.Main.Temp)
 		if withUnits {
 			d.FeelsLike = fmt.Sprintf("%s%s", d.FeelsLike, ImperialIndicator)
 			d.Imperial = fmt.Sprintf("%d%s", f, ImperialIndicator)
@@ -226,9 +247,9 @@ func (d *Owm) setStatus() error {
 		}
 	case "metric":
 		d.UnitIcon = MetricIndicator // "°C" // \ue339"
-		c := int(math.Round(q.temperature.Value))
-		f := convertCelsiusToFahrenheit(q.temperature.Value)
-		k := convertCelsiusToKelvin(q.temperature.Value)
+		c := int(math.Round(q.Main.Temp))
+		f := convertCelsiusToFahrenheit(q.Main.Temp)
+		k := convertCelsiusToKelvin(q.Main.Temp)
 		if withUnits {
 			d.FeelsLike = fmt.Sprintf("%s%s", d.FeelsLike, MetricIndicator)
 			d.Imperial = fmt.Sprintf("%d%s", f, ImperialIndicator)
@@ -243,9 +264,9 @@ func (d *Owm) setStatus() error {
 		fallthrough
 	case "standard":
 		d.UnitIcon = StandardIndicator // "°K" // \ufa05"
-		k := int(math.Round(q.temperature.Value))
-		f := convertKelvinToFahrenheit(q.temperature.Value)
-		c := convertKelvinToCelsius(q.temperature.Value)
+		k := int(math.Round(q.Main.Temp))
+		f := convertKelvinToFahrenheit(q.Main.Temp)
+		c := convertKelvinToCelsius(q.Main.Temp)
 		if withUnits {
 			d.FeelsLike = fmt.Sprintf("%s%s", d.FeelsLike, StandardIndicator)
 			d.Imperial = fmt.Sprintf("%d%s", f, ImperialIndicator)

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"github.com/jandedobbeleer/oh-my-posh/src/cache"
+	"github.com/jandedobbeleer/oh-my-posh/src/cli/upgrade"
 	"github.com/jandedobbeleer/oh-my-posh/src/color"
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/segments"
@@ -16,6 +18,7 @@ func Default(warning bool) *Config {
 	}
 
 	cfg := &Config{
+		hash:       1234567890, // placeholder hash value
 		Version:    3,
 		FinalSpace: true,
 		Blocks: []*Block{
@@ -61,7 +64,7 @@ func Default(warning bool) *Config {
 							"{{ if gt .Ahead 0 }}p:white{{ end }}",
 						},
 						Properties: properties.Map{
-							segments.BranchMaxLength:   25,
+							segments.BranchTemplate:    "{{ trunc 25 .Branch }}",
 							segments.FetchStatus:       true,
 							segments.FetchUpstreamIcon: true,
 						},
@@ -193,6 +196,10 @@ func Default(warning bool) *Config {
 				},
 				Tips: []string{"az"},
 			},
+		},
+		Upgrade: &upgrade.Config{
+			Source:   upgrade.CDN,
+			Interval: cache.ONEWEEK,
 		},
 	}
 

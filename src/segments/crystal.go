@@ -1,7 +1,7 @@
 package segments
 
 type Crystal struct {
-	language
+	Language
 }
 
 func (c *Crystal) Template() string {
@@ -19,5 +19,5 @@ func (c *Crystal) Enabled() bool {
 	}
 	c.versionURLTemplate = "https://github.com/crystal-lang/crystal/releases/tag/{{ .Full }}"
 
-	return c.language.Enabled()
+	return c.Language.Enabled()
 }

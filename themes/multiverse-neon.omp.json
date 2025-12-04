@@ -27,8 +27,7 @@
           ],
           "leading_diamond": " \ue0b6",
           "properties": {
-            "branch_max_length": 25,
-            "fetch_stash_count": true,
+            "branch_template": "{{ trunc 25 .Branch }}",
             "fetch_status": true,
             "fetch_upstream_icon": true
           },

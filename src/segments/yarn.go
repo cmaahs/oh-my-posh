@@ -1,7 +1,7 @@
 package segments
 
 type Yarn struct {
-	language
+	Language
 }
 
 func (n *Yarn) Template() string {
@@ -19,5 +19,5 @@ func (n *Yarn) Enabled() bool {
 	}
 	n.versionURLTemplate = "https://github.com/yarnpkg/berry/releases/tag/v{{ .Full }}"
 
-	return n.language.Enabled()
+	return n.Language.Enabled()
 }

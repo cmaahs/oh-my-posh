@@ -2,15 +2,14 @@ package segments
 
 import (
 	"path/filepath"
+	"slices"
 	"testing"
 
-	cache_ "github.com/jandedobbeleer/oh-my-posh/src/cache/mock"
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/mock"
 
 	"github.com/stretchr/testify/assert"
-	mock_ "github.com/stretchr/testify/mock"
 )
 
 const (
@@ -33,15 +32,10 @@ type languageArgs struct {
 }
 
 func (l *languageArgs) hasvalue(value string, list []string) bool {
-	for _, element := range list {
-		if element == value {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, value)
 }
 
-func bootStrapLanguageTest(args *languageArgs) *language {
+func bootStrapLanguageTest(args *languageArgs) *Language {
 	env := new(mock.Environment)
 
 	for _, command := range args.commands {
@@ -62,16 +56,11 @@ func bootStrapLanguageTest(args *languageArgs) *language {
 	env.On("Pwd").Return(cwd)
 	env.On("Home").Return(home)
 
-	cache := &cache_.Cache{}
-	cache.On("Get", mock_.Anything).Return("", false)
-	cache.On("Set", mock_.Anything, mock_.Anything, mock_.Anything).Return(nil)
-	env.On("Cache").Return(cache)
-
 	if args.properties == nil {
 		args.properties = properties.Map{}
 	}
 
-	l := &language{
+	l := &Language{
 		extensions:         args.extensions,
 		commands:           args.commands,
 		versionURLTemplate: args.versionURLTemplate,
@@ -421,7 +410,7 @@ func TestLanguageHyperlinkEnabled(t *testing.T) {
 	}
 	lang := bootStrapLanguageTest(args)
 	assert.True(t, lang.Enabled())
-	assert.Equal(t, "https://unicor.org/doc/1.3.307", lang.version.URL)
+	assert.Equal(t, "https://unicor.org/doc/1.3.307", lang.URL)
 }
 
 func TestLanguageHyperlinkEnabledWrongRegex(t *testing.T) {
@@ -508,7 +497,7 @@ func TestLanguageInnerHyperlink(t *testing.T) {
 	}
 	lang := bootStrapLanguageTest(args)
 	assert.True(t, lang.Enabled())
-	assert.Equal(t, "https://unicor.org/doc/1.3.307", lang.version.URL)
+	assert.Equal(t, "https://unicor.org/doc/1.3.307", lang.URL)
 }
 
 func TestLanguageHyperlinkTemplatePropertyTakesPriority(t *testing.T) {
@@ -531,7 +520,7 @@ func TestLanguageHyperlinkTemplatePropertyTakesPriority(t *testing.T) {
 	}
 	lang := bootStrapLanguageTest(args)
 	assert.True(t, lang.Enabled())
-	assert.Equal(t, "https://custom/url/template/1.3", lang.version.URL)
+	assert.Equal(t, "https://custom/url/template/1.3", lang.URL)
 }
 
 type mockedLanguageParams struct {
@@ -548,11 +537,6 @@ func getMockedLanguageEnv(params *mockedLanguageParams) (*mock.Environment, prop
 	env.On("HasFiles", params.extension).Return(true)
 	env.On("Pwd").Return("/usr/home/project")
 	env.On("Home").Return("/usr/home")
-
-	cache := &cache_.Cache{}
-	cache.On("Get", mock_.Anything).Return("", false)
-	cache.On("Set", mock_.Anything, mock_.Anything, mock_.Anything).Return(nil)
-	env.On("Cache").Return(cache)
 
 	props := properties.Map{
 		properties.FetchVersion: true,
@@ -582,7 +566,7 @@ func TestNodePackageVersion(t *testing.T) {
 		env.On("HasFilesInDir", path, "package.json").Return(!tc.NoFiles)
 		env.On("FileContent", filepath.Join(path, "package.json")).Return(tc.PackageJSON)
 
-		a := &language{}
+		a := &Language{}
 		a.Init(properties.Map{}, env)
 		got, err := a.nodePackageVersion("nx")
 

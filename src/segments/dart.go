@@ -6,7 +6,7 @@ var (
 )
 
 type Dart struct {
-	language
+	Language
 }
 
 func (d *Dart) Template() string {
@@ -18,6 +18,11 @@ func (d *Dart) Enabled() bool {
 	d.folders = dartFolders
 	d.commands = []*cmd{
 		{
+			executable: "fvm",
+			args:       []string{"dart", "--version"},
+			regex:      `Dart SDK version: (?P<version>((?P<major>[0-9]+).(?P<minor>[0-9]+).(?P<patch>[0-9]+)))`,
+		},
+		{
 			executable: "dart",
 			args:       []string{"--version"},
 			regex:      `Dart SDK version: (?P<version>((?P<major>[0-9]+).(?P<minor>[0-9]+).(?P<patch>[0-9]+)))`,
@@ -25,5 +30,5 @@ func (d *Dart) Enabled() bool {
 	}
 	d.versionURLTemplate = "https://dart.dev/guides/language/evolution#dart-{{ .Major }}{{ .Minor }}"
 
-	return d.language.Enabled()
+	return d.Language.Enabled()
 }

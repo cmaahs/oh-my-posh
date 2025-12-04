@@ -24,20 +24,18 @@ import (
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/http"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/path"
 
-	disk "github.com/shirou/gopsutil/v3/disk"
-	load "github.com/shirou/gopsutil/v3/load"
-	process "github.com/shirou/gopsutil/v3/process"
+	disk "github.com/shirou/gopsutil/v4/disk"
+	load "github.com/shirou/gopsutil/v4/load"
+	process "github.com/shirou/gopsutil/v4/process"
 )
 
 type Terminal struct {
-	CmdFlags     *Flags
-	cmdCache     *cache.Command
-	deviceCache  *cache.File
-	sessionCache *cache.File
-	lsDirMap     maps.Concurrent
-	cwd          string
-	host         string
-	networks     []*Connection
+	CmdFlags *Flags
+	cmdCache *cache.Command
+	lsDirMap *maps.Concurrent[[]fs.DirEntry]
+	cwd      string
+	host     string
+	networks []*Connection
 }
 
 func (term *Terminal) Init(flags *Flags) {
@@ -49,25 +47,14 @@ func (term *Terminal) Init(flags *Flags) {
 		term.CmdFlags = &Flags{}
 	}
 
-	if term.CmdFlags.Plain {
-		log.Plain()
-		log.Debug("plain mode enabled")
-	}
+	term.lsDirMap = maps.NewConcurrent[[]fs.DirEntry]()
 
-	initCache := func(fileName string) *cache.File {
-		fileCache := &cache.File{}
-		fileCache.Init(filepath.Join(cache.Path(), fileName), term.CmdFlags.SaveCache)
-		return fileCache
-	}
-
-	term.deviceCache = initCache(cache.FileName)
-	term.sessionCache = initCache(cache.SessionFileName)
 	term.setPromptCount()
 
 	term.setPwd()
 
 	term.cmdCache = &cache.Command{
-		Commands: maps.NewConcurrent(),
+		Commands: maps.NewConcurrent[string](),
 	}
 }
 
@@ -89,9 +76,14 @@ func (term *Terminal) setPwd() {
 		if term.GOOS() != WINDOWS {
 			return pwd
 		}
+
 		// on Windows, and being case sensitive and not consistent and all, this gives silly issues
-		driveLetter := regex.GetCompiledRegex(`^[a-z]:`)
-		return driveLetter.ReplaceAllStringFunc(pwd, strings.ToUpper)
+		driveLetter, err := regex.GetCompiledRegex(`^[a-z]:`)
+		if err == nil {
+			return driveLetter.ReplaceAllStringFunc(pwd, strings.ToUpper)
+		}
+
+		return pwd
 	}
 
 	if term.CmdFlags != nil && term.CmdFlags.PWD != "" {
@@ -121,7 +113,7 @@ func (term *Terminal) HasFilesInDir(dir, pattern string) bool {
 	var dirEntries []fs.DirEntry
 
 	if files, OK := term.lsDirMap.Get(dir); OK {
-		dirEntries, _ = files.([]fs.DirEntry)
+		dirEntries = files
 	}
 
 	if len(dirEntries) == 0 {
@@ -419,8 +411,9 @@ func (term *Terminal) HTTPRequest(targetURL string, body io.Reader, timeout int,
 
 	// anything inside the range [200, 299] is considered a success
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		message := "HTTP status code " + strconv.Itoa(response.StatusCode)
-		err := errors.New(message)
+		err := &http.Error{
+			StatusCode: response.StatusCode,
+		}
 		log.Error(err)
 		return nil, err
 	}
@@ -483,37 +476,6 @@ func (term *Terminal) StackCount() int {
 	return term.CmdFlags.StackCount
 }
 
-func (term *Terminal) Cache() cache.Cache {
-	return term.deviceCache
-}
-
-func (term *Terminal) Session() cache.Cache {
-	return term.sessionCache
-}
-
-func (term *Terminal) Close() {
-	defer log.Trace(time.Now())
-	term.clearCacheFiles()
-	term.deviceCache.Close()
-	term.sessionCache.Close()
-}
-
-func (term *Terminal) clearCacheFiles() {
-	if !term.CmdFlags.Init {
-		return
-	}
-
-	deletedFiles, err := cache.Clear(cache.Path(), false)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-
-	for _, file := range deletedFiles {
-		log.Debugf("removed cache file: %s", file)
-	}
-}
-
 func (term *Terminal) Logs() string {
 	return log.String()
 }
@@ -546,7 +508,7 @@ func dirMatchesOneOf(dir, home, goos string, regexes []string) bool {
 		normalized := strings.ReplaceAll(element, "\\\\", "/")
 		if strings.HasPrefix(normalized, "~") {
 			rem := normalized[1:]
-			if len(rem) == 0 || rem[0] == '/' {
+			if rem == "" || rem[0] == '/' {
 				normalized = home + rem
 			}
 		}
@@ -566,14 +528,14 @@ func (term *Terminal) setPromptCount() {
 	defer log.Trace(time.Now())
 
 	var count int
-	if val, found := term.Session().Get(cache.PROMPTCOUNTCACHE); found {
-		count, _ = strconv.Atoi(val)
+	if val, found := cache.Get[int](cache.Session, cache.PROMPTCOUNTCACHE); found {
+		count = val
 	}
 
 	// Only update the count if we're generating a primary prompt.
 	if term.CmdFlags.Type == PRIMARY {
 		count++
-		term.Session().Set(cache.PROMPTCOUNTCACHE, strconv.Itoa(count), cache.ONEDAY)
+		cache.Set(cache.Session, cache.PROMPTCOUNTCACHE, count, cache.ONEDAY)
 	}
 
 	term.CmdFlags.PromptCount = count

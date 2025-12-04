@@ -12,7 +12,7 @@ import (
 )
 
 type Unity struct {
-	base
+	Base
 
 	UnityVersion  string
 	CSharpVersion string
@@ -28,7 +28,7 @@ func (u *Unity) Enabled() bool {
 		log.Error(err)
 		return false
 	}
-	if len(unityVersion) == 0 {
+	if unityVersion == "" {
 		return false
 	}
 	u.UnityVersion = unityVersion
@@ -57,16 +57,16 @@ func (u *Unity) GetUnityVersion() (string, error) {
 	versionFilePath := filepath.Join(projectDir.Path, "ProjectVersion.txt")
 	versionFileText := u.env.FileContent(versionFilePath)
 
-	lines := strings.Split(versionFileText, "\n")
+	lines := strings.SplitSeq(versionFileText, "\n")
 	versionPrefix := "m_EditorVersion: "
-	for _, line := range lines {
+	for line := range lines {
 		if !strings.HasPrefix(line, versionPrefix) {
 			continue
 		}
 		version := strings.TrimPrefix(line, versionPrefix)
 		version = strings.TrimSpace(version)
-		if len(version) == 0 {
-			return "", errors.New("Empty m_EditorVersion")
+		if version == "" {
+			return "", errors.New("empty m_EditorVersion")
 		}
 		fIndex := strings.Index(version, "f")
 		if fIndex > 0 {

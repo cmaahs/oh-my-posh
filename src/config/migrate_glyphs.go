@@ -1,15 +1,12 @@
 package config
 
 import (
-	"context"
 	"fmt"
-	"io"
-	httplib "net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/http"
+	"github.com/jandedobbeleer/oh-my-posh/src/text"
 )
 
 type ConnectionError struct {
@@ -25,29 +22,14 @@ type codePoints map[uint64]uint64
 func getGlyphCodePoints() (codePoints, error) {
 	var codePoints = make(codePoints)
 
-	ctx, cncl := context.WithTimeout(context.Background(), time.Millisecond*time.Duration(5000))
-	defer cncl()
-
-	request, err := httplib.NewRequestWithContext(ctx, httplib.MethodGet, "https://ohmyposh.dev/codepoints.csv", nil)
+	bytes, err := http.Download("https://ohmyposh.dev/codepoints.csv", false)
 	if err != nil {
 		return codePoints, &ConnectionError{reason: err.Error()}
 	}
 
-	response, err := http.HTTPClient.Do(request)
-	if err != nil {
-		return codePoints, err
-	}
+	lines := strings.SplitSeq(string(bytes), "\n")
 
-	defer response.Body.Close()
-
-	bytes, err := io.ReadAll(response.Body)
-	if err != nil {
-		return codePoints, err
-	}
-
-	lines := strings.Split(string(bytes), "\n")
-
-	for _, line := range lines {
+	for line := range lines {
 		fields := strings.Split(line, ",")
 		if len(fields) < 2 {
 			continue
@@ -69,7 +51,7 @@ func getGlyphCodePoints() (codePoints, error) {
 	return codePoints, nil
 }
 
-func escapeGlyphs(s string, migrate bool) string {
+func EscapeGlyphs(s string, migrate bool) string {
 	shouldExclude := func(r rune) bool {
 		if r < 0x1000 { // Basic Multilingual Plane
 			return true
@@ -110,11 +92,11 @@ func escapeGlyphs(s string, migrate bool) string {
 		}
 	}
 
-	var builder strings.Builder
+	sb := text.NewBuilder()
 	for _, r := range s {
 		// exclude regular characters and emojis
 		if shouldExclude(r) {
-			builder.WriteRune(r)
+			sb.WriteRune(r)
 			continue
 		}
 
@@ -129,12 +111,13 @@ func escapeGlyphs(s string, migrate bool) string {
 			one := 0xd800 + (((r - 0x10000) >> 10) & 0x3ff)
 			two := 0xdc00 + ((r - 0x10000) & 0x3ff)
 			quoted := fmt.Sprintf("\\u%04x\\u%04x", one, two)
-			builder.WriteString(quoted)
+			sb.WriteString(quoted)
 			continue
 		}
 
 		quoted := fmt.Sprintf("\\u%04x", r)
-		builder.WriteString(quoted)
+		sb.WriteString(quoted)
 	}
-	return builder.String()
+
+	return sb.String()
 }

@@ -72,7 +72,7 @@ func (term *Terminal) IsWsl2() bool {
 
 func (term *Terminal) IsCygwin() bool {
 	defer log.Trace(time.Now())
-	return len(term.Getenv("OSTYPE")) > 0
+	return len(term.Getenv("OSTYPE")) != 0 || term.Getenv("BROWSER") == "cygstart"
 }
 
 func (term *Terminal) TerminalWidth() (int, error) {
@@ -114,7 +114,7 @@ func (term *Terminal) Platform() string {
 //
 // Returns a variant type if successful; nil and an error if not.
 func (term *Terminal) WindowsRegistryKeyValue(input string) (*WindowsRegistryValue, error) {
-	log.Trace(time.Now(), input)
+	defer log.Trace(time.Now(), input)
 
 	// Format:
 	// "HKLM\Software\Microsoft\Windows NT\CurrentVersion\EditionID"
@@ -220,8 +220,9 @@ func (term *Terminal) Connection(connectionType ConnectionType) (*Connection, er
 	if term.networks == nil {
 		networks := term.getConnections()
 		if len(networks) == 0 {
-			return nil, errors.New("No connections found")
+			return nil, errors.New("no connections found")
 		}
+
 		term.networks = networks
 	}
 
@@ -231,6 +232,6 @@ func (term *Terminal) Connection(connectionType ConnectionType) (*Connection, er
 		}
 	}
 
-	log.Error(fmt.Errorf("Network type '%s' not found", connectionType))
+	log.Error(fmt.Errorf("network type '%s' not found", connectionType))
 	return nil, &NotImplemented{}
 }

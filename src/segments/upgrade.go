@@ -1,13 +1,12 @@
 package segments
 
 import (
-	"encoding/json"
 	"errors"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/build"
 	"github.com/jandedobbeleer/oh-my-posh/src/cache"
+	"github.com/jandedobbeleer/oh-my-posh/src/cli/upgrade"
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
-	"github.com/jandedobbeleer/oh-my-posh/src/upgrade"
 )
 
 type UpgradeCache struct {
@@ -16,7 +15,7 @@ type UpgradeCache struct {
 }
 
 type Upgrade struct {
-	base
+	Base
 
 	// deprecated
 	Version string
@@ -34,37 +33,27 @@ func (u *Upgrade) Template() string {
 
 func (u *Upgrade) Enabled() bool {
 	u.Current = build.Version
-	latest, err := u.cachedLatest(u.Current)
-	if err != nil {
-		latest, err = u.checkUpdate(u.Current)
+	upgradeCache, err := u.upgradeCache()
+	if err != nil || upgradeCache.Current != u.Current {
+		upgradeCache, err = u.checkUpdate(u.Current)
 	}
 
-	if err != nil || u.Current == latest.Latest {
+	if err != nil || u.Current == upgradeCache.Latest {
 		return false
 	}
 
-	u.UpgradeCache = *latest
+	u.UpgradeCache = *upgradeCache
 	u.Version = u.Latest
 	return true
 }
 
-func (u *Upgrade) cachedLatest(current string) (*UpgradeCache, error) {
-	data, ok := u.env.Cache().Get(UPGRADECACHEKEY)
+func (u *Upgrade) upgradeCache() (*UpgradeCache, error) {
+	data, ok := cache.Get[*UpgradeCache](cache.Device, UPGRADECACHEKEY)
 	if !ok {
 		return nil, errors.New("no cache data")
 	}
 
-	var cacheJSON UpgradeCache
-	err := json.Unmarshal([]byte(data), &cacheJSON)
-	if err != nil {
-		return nil, err // invalid cache data
-	}
-
-	if current != cacheJSON.Current {
-		return nil, errors.New("version changed, run the check again")
-	}
-
-	return &cacheJSON, nil
+	return data, nil
 }
 
 func (u *Upgrade) checkUpdate(current string) (*UpgradeCache, error) {
@@ -76,7 +65,7 @@ func (u *Upgrade) checkUpdate(current string) (*UpgradeCache, error) {
 		Interval: cache.Duration(duration),
 	}
 
-	latest, err := cfg.Latest()
+	latest, err := cfg.FetchLatest()
 	if err != nil {
 		return nil, err
 	}
@@ -86,12 +75,7 @@ func (u *Upgrade) checkUpdate(current string) (*UpgradeCache, error) {
 		Current: current,
 	}
 
-	cacheJSON, err := json.Marshal(cacheData)
-	if err != nil {
-		return nil, err
-	}
-
-	u.env.Cache().Set(UPGRADECACHEKEY, string(cacheJSON), cache.Duration(duration))
+	cache.Set(cache.Device, UPGRADECACHEKEY, cacheData, cache.Duration(duration))
 
 	return cacheData, nil
 }

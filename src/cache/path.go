@@ -9,40 +9,23 @@ import (
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/path"
 )
 
+var cachePath string
+
 func Path() string {
 	defer log.Trace(time.Now())
 
-	returnOrBuildCachePath := func(input string) (string, bool) {
-		// validate root path
-		if _, err := os.Stat(input); err != nil {
-			return "", false
-		}
-
-		// validate oh-my-posh folder, if non existent, create it
-		cachePath := filepath.Join(input, "oh-my-posh")
-		if _, err := os.Stat(cachePath); err == nil {
-			return cachePath, true
-		}
-
-		if err := os.Mkdir(cachePath, 0o755); err != nil {
-			return "", false
-		}
-
-		return cachePath, true
+	if cachePath != "" {
+		return cachePath
 	}
+
+	var OK bool
 
 	// allow the user to set the cache path using OMP_CACHE_DIR
-	if cachePath, OK := returnOrBuildCachePath(os.Getenv("OMP_CACHE_DIR")); OK {
+	if cachePath, OK = returnOrBuildCachePath(os.Getenv("OMP_CACHE_DIR")); OK {
 		return cachePath
 	}
 
-	// WINDOWS cache folder, should not exist elsewhere
-	if cachePath, OK := returnOrBuildCachePath(os.Getenv("LOCALAPPDATA")); OK {
-		return cachePath
-	}
-
-	// get XDG_CACHE_HOME if present
-	if cachePath, OK := returnOrBuildCachePath(os.Getenv("XDG_CACHE_HOME")); OK {
+	if cachePath, OK = platformCachePath(); OK {
 		return cachePath
 	}
 
@@ -53,9 +36,28 @@ func Path() string {
 	}
 
 	// HOME cache folder
-	if cachePath, OK := returnOrBuildCachePath(dotCache); OK {
+	if cachePath, OK = returnOrBuildCachePath(dotCache); OK {
 		return cachePath
 	}
 
-	return path.Home()
+	return cachePath
+}
+
+func returnOrBuildCachePath(input string) (string, bool) {
+	// validate root path
+	if _, err := os.Stat(input); err != nil {
+		return "", false
+	}
+
+	// validate oh-my-posh folder, if non existent, create it
+	cachePath := filepath.Join(input, "oh-my-posh")
+	if _, err := os.Stat(cachePath); err == nil {
+		return cachePath, true
+	}
+
+	if err := os.Mkdir(cachePath, 0o755); err != nil {
+		return "", false
+	}
+
+	return cachePath, true
 }

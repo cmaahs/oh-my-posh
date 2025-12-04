@@ -3,6 +3,10 @@ if ($null -ne (Get-Module -Name "oh-my-posh-core")) {
     Remove-Module -Name "oh-my-posh-core" -Force
 }
 
+# disable all known python virtual environment prompts
+$env:VIRTUAL_ENV_DISABLE_PROMPT = 1
+$env:PYENV_VIRTUALENV_DISABLE_PROMPT = 1
+
 # Helper functions which need to be defined before the module is loaded
 # See https://github.com/JanDeDobbeleer/oh-my-posh/discussions/2300
 function global:Get-PoshStackCount {
@@ -32,7 +36,7 @@ New-Module -Name "oh-my-posh-core" -ScriptBlock {
     $script:NoExitCode = $true
     $script:ErrorCode = 0
     $script:ExecutionTime = 0
-    $script:ShellName = "::SHELL::"
+    $script:ShellName = "pwsh"
     $script:PSVersion = $PSVersionTable.PSVersion.ToString()
     $script:TransientPrompt = $false
     $script:TooltipCommand = ''
@@ -41,13 +45,7 @@ New-Module -Name "oh-my-posh-core" -ScriptBlock {
     $env:POWERLINE_COMMAND = "oh-my-posh"
     $env:POSH_SHELL = "pwsh"
     $env:POSH_SHELL_VERSION = $script:PSVersion
-    $env:POSH_SESSION_ID = ::SESSION_ID::
     $env:CONDA_PROMPT_MODIFIER = $false
-
-    # set the default theme
-    if (::CONFIG:: -and (Test-Path -LiteralPath ::CONFIG::)) {
-        $env:POSH_THEME = (Resolve-Path -Path ::CONFIG::).ProviderPath
-    }
 
     function Invoke-Utf8Posh {
         param([string[]]$Arguments = @())
@@ -66,7 +64,8 @@ New-Module -Name "oh-my-posh-core" -ScriptBlock {
             # ref-1: https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.processstartinfo.argumentlist?view=net-6.0
             # ref-2: https://docs.microsoft.com/en-us/powershell/scripting/whats-new/differences-from-windows-powershell?view=powershell-7.2#net-framework-vs-net-core
             $Arguments | ForEach-Object -Process { $StartInfo.ArgumentList.Add($_) }
-        } else {
+        }
+        else {
             # escape arguments manually in lower versions, refer to https://docs.microsoft.com/en-us/previous-versions/17w5ykft(v=vs.85)
             $escapedArgs = $Arguments | ForEach-Object {
                 # escape N consecutive backslash(es), which are followed by a double quote, to 2N consecutive ones
@@ -126,35 +125,15 @@ New-Module -Name "oh-my-posh-core" -ScriptBlock {
         $terminalWidth
     }
 
-    function Get-FileHyperlink {
-        param(
-            [Parameter(Mandatory, ValuefromPipeline = $True)]
-            [string]$Uri,
-            [Parameter(ValuefromPipeline = $True)]
-            [string]$Name
-        )
-
-        if (!$Name) {
-            # if name not set, uri is used as the name of the hyperlink
-            $Name = $Uri
-        }
-
-        if ($null -ne $env:WSL_DISTRO_NAME) {
-            # wsl conversion if needed
-            $Uri = &wslpath -m $Uri
-        }
-
-        # return an ANSI formatted hyperlink
-        return "`e]8;;file://$Uri`e\$Name`e]8;;`e\"
-    }
-
     function Set-TransientPrompt {
         $previousOutputEncoding = [Console]::OutputEncoding
         try {
             $script:TransientPrompt = $true
             [Console]::OutputEncoding = [Text.Encoding]::UTF8
             [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt()
-        } finally {
+        }
+        catch [System.ArgumentOutOfRangeException] { }
+        finally {
             [Console]::OutputEncoding = $previousOutputEncoding
         }
     }
@@ -184,14 +163,16 @@ New-Module -Name "oh-my-posh-core" -ScriptBlock {
         if ($global:_ompAzure) {
             try {
                 $env:POSH_AZURE_SUBSCRIPTION = Get-AzContext | ConvertTo-Json
-            } catch {}
+            }
+            catch {}
         }
 
         if ($global:_ompPoshGit) {
             try {
                 $global:GitStatus = Get-GitStatus
                 $env:POSH_GIT_STATUS = $global:GitStatus | ConvertTo-Json
-            } catch {}
+            }
+            catch {}
         }
     }
 
@@ -215,11 +196,13 @@ New-Module -Name "oh-my-posh-core" -ScriptBlock {
 
         $invocationInfo = try {
             # retrieve info of the most recent error
-            $global:Error[0] | Where-Object { $_ -ne $null } | Select-Object -ExpandProperty InvocationInfo
-        } catch { $null }
+            $global:Error | Where-Object { $_.GetType().Name -eq 'ErrorRecord' } | Select-Object -First 1 -ExpandProperty InvocationInfo
+        }
+        catch { $null }
 
-        # check if the last command caused the last error
-        if ($null -ne $invocationInfo -and $lastHistory.CommandLine -eq $invocationInfo.Line) {
+        # Check if the error occurred in the current command scope
+        if ($null -ne $invocationInfo -and
+            $invocationInfo.HistoryId -eq $lastHistory.Id) {
             $script:ErrorCode = 1
             return
         }
@@ -260,11 +243,15 @@ New-Module -Name "oh-my-posh-core" -ScriptBlock {
         if ($global:NVS_ORIGINAL_LASTEXECUTIONSTATUS -is [bool]) {
             # make it compatible with NVS auto-switching, if enabled
             $script:OriginalLastExecutionStatus = $global:NVS_ORIGINAL_LASTEXECUTIONSTATUS
-        } else {
+        }
+        else {
             $script:OriginalLastExecutionStatus = $?
         }
         # store the orignal last exit code
         $script:OriginalLastExitCode = $global:LASTEXITCODE
+
+        # Reset tooltip command.
+        $script:TooltipCommand = ''
 
         Set-PoshPromptType
 
@@ -346,7 +333,8 @@ New-Module -Name "oh-my-posh-core" -ScriptBlock {
                 # Workaround to prevent the text after cursor from disappearing when the tooltip is printed.
                 [Microsoft.PowerShell.PSConsoleReadLine]::Insert(' ')
                 [Microsoft.PowerShell.PSConsoleReadLine]::Undo()
-            } finally {}
+            }
+            finally {}
         }
     }
 
@@ -355,36 +343,62 @@ New-Module -Name "oh-my-posh-core" -ScriptBlock {
             return
         }
 
-        Set-PSReadLineKeyHandler -Key Enter -BriefDescription 'OhMyPoshEnterKeyHandler' -ScriptBlock {
-            try {
-                $parseErrors = $null
-                [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$null, [ref]$null, [ref]$parseErrors, [ref]$null)
-                $executingCommand = $parseErrors.Count -eq 0
-                if ($executingCommand) {
-                    $script:TooltipCommand = ''
-                    Set-TransientPrompt
+        # Helper function to create Enter key handler script block
+        function New-EnterKeyHandler {
+            param(
+                [scriptblock]$AcceptLineFunction
+            )
+            return {
+                try {
+                    $parseErrors = $null
+                    [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$null, [ref]$null, [ref]$parseErrors, [ref]$null)
+                    $executingCommand = $parseErrors.Count -eq 0
+                    if ($executingCommand) {
+                        Set-TransientPrompt
+                    }
                 }
-            } finally {
-                [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
-                if ($global:_ompFTCSMarks -and $executingCommand) {
-                    # Write FTCS_COMMAND_EXECUTED after accepting the input - it should still happen before execution
-                    Write-Host "$([char]0x1b)]133;C`a" -NoNewline
+                finally {
+                    & $AcceptLineFunction
+                    if ($global:_ompFTCSMarks -and $executingCommand) {
+                        # Write FTCS_COMMAND_EXECUTED after accepting the input - it should still happen before execution
+                        Write-Host "$([char]27)]133;C$([char]7)" -NoNewline
+                    }
                 }
-            }
+            }.GetNewClosure()
         }
 
-        Set-PSReadLineKeyHandler -Key Ctrl+c -BriefDescription 'OhMyPoshCtrlCKeyHandler' -ScriptBlock {
-            try {
-                $start = $null
-                [Microsoft.PowerShell.PSConsoleReadLine]::GetSelectionState([ref]$start, [ref]$null)
-                # only render a transient prompt when no text is selected
-                if ($start -eq -1) {
-                    $script:TooltipCommand = ''
-                    Set-TransientPrompt
+        # Helper function to create Ctrl+C key handler script block
+        function New-CtrlCKeyHandler {
+            param(
+                [scriptblock]$CancelFunction
+            )
+            return {
+                try {
+                    $start = $null
+                    [Microsoft.PowerShell.PSConsoleReadLine]::GetSelectionState([ref]$start, [ref]$null)
+                    # only render a transient prompt when no text is selected
+                    if ($start -eq -1) {
+                        Set-TransientPrompt
+                    }
                 }
-            } finally {
-                [Microsoft.PowerShell.PSConsoleReadLine]::CopyOrCancelLine()
-            }
+                finally {
+                    & $CancelFunction
+                }
+            }.GetNewClosure()
+        }
+
+        # Register Enter key handlers
+        Set-PSReadLineKeyHandler -Key Enter -BriefDescription 'OhMyPoshEnterKeyHandler' -ScriptBlock (New-EnterKeyHandler { [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine() })
+
+        if ((Get-PSReadLineOption).EditMode -eq "Vi") {
+            Set-PSReadLineKeyHandler -ViMode Command -Key Enter -BriefDescription 'OhMyPoshViEnterKeyHandler' -ScriptBlock (New-EnterKeyHandler { [Microsoft.PowerShell.PSConsoleReadLine]::ViAcceptLine() })
+        }
+
+        # Register Ctrl+C key handlers
+        Set-PSReadLineKeyHandler -Key Ctrl+c -BriefDescription 'OhMyPoshCtrlCKeyHandler' -ScriptBlock (New-CtrlCKeyHandler { [Microsoft.PowerShell.PSConsoleReadLine]::CopyOrCancelLine() })
+
+        if ((Get-PSReadLineOption).EditMode -eq "Vi") {
+            Set-PSReadLineKeyHandler -ViMode Command -Key Ctrl+c -BriefDescription 'OhMyPoshViCtrlCKeyHandler' -ScriptBlock (New-CtrlCKeyHandler { [Microsoft.PowerShell.PSConsoleReadLine]::CancelLine() })
         }
     }
 
@@ -394,124 +408,11 @@ New-Module -Name "oh-my-posh-core" -ScriptBlock {
         Set-PSReadLineOption -PromptText $validLine, $errorLine
     }
 
-    <#
-    .SYNOPSIS
-        Exports the current oh-my-posh theme.
-    .DESCRIPTION
-        By default the config is exported in JSON to the clipboard.
-    .EXAMPLE
-        Export-PoshTheme
-
-        Exports the current theme in JSON to the clipboard.
-    .EXAMPLE
-        Export-PoshTheme -Format toml
-
-        Exports the current theme in TOML to the clipboard.
-    .EXAMPLE
-        Export-PoshTheme C:\temp\theme.yaml yaml
-
-        Exports the current theme in YAML to 'C:\temp\theme.yaml'.
-    .EXAMPLE
-        Export-PoshTheme ~\theme.toml toml
-
-        Exports the current theme in TOML to '$HOME\theme.toml'
-    #>
-    function Export-PoshTheme {
-        param(
-            [Parameter(Mandatory = $false)]
-            [string]
-            # The file path where the theme will be exported. If not provided, the config is copied to the clipboard by default.
-            $FilePath,
-            [Parameter(Mandatory = $false)]
-            [ValidateSet('json', 'yaml', 'toml')]
-            [string]
-            # The format of the theme.
-            $Format = 'json'
-        )
-
-        if ($FilePath) {
-            # https://stackoverflow.com/questions/3038337/powershell-resolve-path-that-might-not-exist
-            $FilePath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($FilePath)
-        }
-
-        $output = Invoke-Utf8Posh @(
-            "config", "export"
-            "--format=$Format"
-            "--output=$FilePath"
-        )
-        if (!$output) {
-            Write-Host "Theme exported to $(Get-FileHyperlink $FilePath)."
-            return
-        }
-
-        # When no path is provided, copy the output to clipboard.
-        Set-Clipboard $output
-        Write-Host 'Theme copied to clipboard.'
-    }
-
-    function Get-PoshThemes {
-        param(
-            [Parameter(Mandatory = $false, HelpMessage = "The themes folder")]
-            [string]
-            $Path = $env:POSH_THEMES_PATH,
-            [switch]
-            [Parameter(Mandatory = $false, HelpMessage = "List themes path")]
-            $List
-        )
-
-        while (-not (Test-Path -LiteralPath $Path)) {
-            $Path = Read-Host 'Please enter the themes path'
-        }
-
-        $Path = (Resolve-Path -Path $Path).ProviderPath
-
-        $logo = @'
-   __  _____ _      ___  ___       ______         _      __
-  / / |  _  | |     |  \/  |       | ___ \       | |     \ \
- / /  | | | | |__   | .  . |_   _  | |_/ /__  ___| |__    \ \
-< <   | | | | '_ \  | |\/| | | | | |  __/ _ \/ __| '_ \    > >
- \ \  \ \_/ / | | | | |  | | |_| | | | | (_) \__ \ | | |  / /
-  \_\  \___/|_| |_| \_|  |_/\__, | \_|  \___/|___/_| |_| /_/
-                             __/ |
-                            |___/
-'@
-        Write-Host $logo
-        $themes = Get-ChildItem -Path "$Path/*" -Include '*.omp.json' | Sort-Object Name
-        if ($List -eq $true) {
-            $themes | Select-Object @{ Name = 'hyperlink'; Expression = { Get-FileHyperlink -Uri $_.FullName } } | Format-Table -HideTableHeaders
-        } else {
-            $nonFSWD = Get-NonFSWD
-            $stackCount = Get-PoshStackCount
-            $terminalWidth = Get-TerminalWidth
-            $themes | ForEach-Object -Process {
-                Write-Host "Theme: $(Get-FileHyperlink -Uri $_.FullName -Name ($_.BaseName -replace '\.omp$', ''))`n"
-                Invoke-Utf8Posh @(
-                    "print", "primary"
-                    "--config=$($_.FullName)"
-                    "--shell=$script:ShellName"
-                    "--shell-version=$script:PSVersion"
-                    "--pswd=$nonFSWD"
-                    "--stack-count=$stackCount"
-                    "--terminal-width=$terminalWidth"
-                )
-                Write-Host "`n"
-            }
-        }
-        Write-Host @"
-
-Themes location: $(Get-FileHyperlink -Uri "$Path")
-
-To change your theme, adjust the init script in $PROFILE.
-Example:
-  oh-my-posh init pwsh --config '$((Join-Path $Path "jandedobbeleer.omp.json") -replace "'", "''")' | Invoke-Expression
-
-"@
-    }
-
     # perform cleanup on removal so a new initialization in current session works
     if (!$script:ConstrainedLanguageMode) {
         $ExecutionContext.SessionState.Module.OnRemove += {
-            Remove-Item Function:Get-PoshStackCount
+            Remove-Item Function:Get-PoshStackCount -ErrorAction SilentlyContinue
+
             $Function:prompt = $script:OriginalPromptFunction
 
             (Get-PSReadLineOption).ContinuationPrompt = $script:OriginalContinuationPrompt
@@ -523,10 +424,16 @@ Example:
 
             if ((Get-PSReadLineKeyHandler Enter).Function -eq 'OhMyPoshEnterKeyHandler') {
                 Set-PSReadLineKeyHandler Enter -Function AcceptLine
+                if ((Get-PSReadLineOption).EditMode -eq "Vi") {
+                    Set-PSReadLineKeyHandler -ViMode Command -Key Enter -Function ViAcceptLine
+                }
             }
 
             if ((Get-PSReadLineKeyHandler Ctrl+c).Function -eq 'OhMyPoshCtrlCKeyHandler') {
                 Set-PSReadLineKeyHandler Ctrl+c -Function CopyOrCancelLine
+                if ((Get-PSReadLineOption).EditMode -eq "Vi") {
+                    Set-PSReadLineKeyHandler -ViMode Command -Key Ctrl+c -Function CancelLine
+                }
             }
         }
     }
@@ -536,8 +443,7 @@ Example:
         "Enable-PoshTooltips"
         "Enable-PoshTransientPrompt"
         "Enable-PoshLineError"
-        "Export-PoshTheme"
-        "Get-PoshThemes"
+        "Set-TransientPrompt"
         "prompt"
     )
 } | Import-Module -Global

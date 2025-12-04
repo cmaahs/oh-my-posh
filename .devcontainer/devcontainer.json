@@ -1,14 +1,13 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
-// https://github.com/microsoft/vscode-dev-containers/tree/v0.177.0/containers/go
+// For format details, see https://containers.dev/implementors/json_reference.
+// For config options, see the README at: https://github.com/devcontainers/images/tree/main/src/go
 {
   "name": "oh-my-posh",
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
-      // Update the VARIANT arg to pick a version of Go: 1, 1.16, 1.17
-      // Append -bullseye or -buster to pin to an OS version.
-      // Use -bullseye variants on local arm64/Apple Silicon.
-      "VARIANT": "1-1.22-bullseye",
+      // Update the VARIANT arg to pick a version of Go: 1, 1.23, 1.24
+      // Append -bookworm or -bullseye to pin to an OS version.
+      "VARIANT": "1-1.24-bullseye",
 
       // Override me with your own timezone:
       "TZ": "UTC",
@@ -58,7 +57,7 @@
           }
         },
         "terminal.integrated.defaultProfile.linux": "pwsh",
-        "terminal.integrated.defaultProfile.windows": "pwsh",
+        "terminal.integrated.defaultProfile.windows": "PowerShell",
         "terminal.integrated.defaultProfile.osx": "pwsh",
         "terminal.integrated.shellIntegration.enabled": false,
         "tasks.statusbar.default.hide": true

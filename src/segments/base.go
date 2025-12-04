@@ -5,22 +5,36 @@ import (
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime"
 )
 
-type base struct {
+type Base struct {
 	props properties.Properties
 	env   runtime.Environment
 
-	Output string `json:"Text"`
+	Segment *Segment
 }
 
-func (s *base) Text() string {
-	return s.Output
+type Segment struct {
+	Text  string
+	Index int
 }
 
-func (s *base) SetText(text string) {
-	s.Output = text
+func (b *Base) Text() string {
+	return b.Segment.Text
 }
 
-func (s *base) Init(props properties.Properties, env runtime.Environment) {
-	s.props = props
-	s.env = env
+func (b *Base) SetText(text string) {
+	b.Segment.Text = text
+}
+
+func (b *Base) SetIndex(index int) {
+	b.Segment.Index = index
+}
+
+func (b *Base) Init(props properties.Properties, env runtime.Environment) {
+	b.Segment = &Segment{}
+	b.props = props
+	b.env = env
+}
+
+func (b *Base) CacheKey() (string, bool) {
+	return "", false
 }

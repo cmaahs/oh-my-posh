@@ -9,13 +9,13 @@ import (
 //go:embed scripts/omp.xsh
 var xonshInit string
 
-func (f Feature) Xonsh() Code {
+func (f Features) Xonsh() Code {
 	switch f {
 	case Upgrade:
-		return "@(_omp_executable) upgrade"
+		return "@(_omp_executable) upgrade --auto"
 	case Notice:
 		return "@(_omp_executable) notice"
-	case PromptMark, RPrompt, PoshGit, Azure, LineError, Jobs, Tooltips, Transient, CursorPositioning, FTCSMarks:
+	case PromptMark, RPrompt, PoshGit, Azure, LineError, Jobs, Tooltips, Transient, CursorPositioning, FTCSMarks, Async:
 		fallthrough
 	default:
 		return ""
@@ -23,7 +23,7 @@ func (f Feature) Xonsh() Code {
 }
 
 func quotePythonStr(str string) string {
-	if len(str) == 0 {
+	if str == "" {
 		return "''"
 	}
 

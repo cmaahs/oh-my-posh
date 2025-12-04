@@ -5,7 +5,7 @@ import (
 )
 
 type Spotify struct {
-	base
+	Base
 
 	MusicPlayer
 }
@@ -24,6 +24,8 @@ const (
 	PausedIcon properties.Property = "paused_icon"
 	// StoppedIcon indicates a song is stopped
 	StoppedIcon properties.Property = "stopped_icon"
+	// AdIcon indicates an advertisement is playing
+	AdIcon properties.Property = "ad_icon"
 
 	playing = "playing"
 	stopped = "stopped"

@@ -1,7 +1,7 @@
 package segments
 
 type AzFunc struct {
-	language
+	Language
 }
 
 func (az *AzFunc) Template() string {
@@ -19,5 +19,5 @@ func (az *AzFunc) Enabled() bool {
 		},
 	}
 
-	return az.language.Enabled()
+	return az.Language.Enabled()
 }

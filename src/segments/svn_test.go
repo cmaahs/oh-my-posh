@@ -44,8 +44,8 @@ func TestSvnEnabledInWorkingDirectory(t *testing.T) {
 	s.Init(properties.Map{}, env)
 
 	assert.True(t, s.Enabled())
-	assert.Equal(t, fileInfo.Path, s.workingDir)
-	assert.Equal(t, fileInfo.Path, s.realDir)
+	assert.Equal(t, fileInfo.Path, s.mainSCMDir)
+	assert.Equal(t, fileInfo.Path, s.repoRootDir)
 }
 
 func TestSvnTemplateString(t *testing.T) {
@@ -243,7 +243,7 @@ R       Moved.File`,
 		}
 
 		s := &Svn{
-			scm: scm{
+			Scm: Scm{
 				command: SVNCOMMAND,
 			},
 		}
@@ -293,7 +293,7 @@ func TestRepo(t *testing.T) {
 		env.On("RunCommand", "svn", []string{"info", "", "--show-item", "repos-root-url"}).Return(tc.Repo, nil)
 
 		s := &Svn{
-			scm: scm{
+			Scm: Scm{
 				command: SVNCOMMAND,
 			},
 		}

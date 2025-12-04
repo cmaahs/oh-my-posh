@@ -10,7 +10,7 @@ import (
 )
 
 type Az struct {
-	base
+	Base
 
 	Origin string
 	AzureSubscription
@@ -19,9 +19,10 @@ type Az struct {
 const (
 	Source properties.Property = "source"
 
-	Pwsh       = "pwsh"
-	Cli        = "cli"
-	FirstMatch = "first_match"
+	Pwsh = "pwsh"
+	Cli  = "cli"
+	// this deprecated value is used to support the old behavior of first_match
+	FirstMatch = "cli|pwsh"
 	azureEnv   = "POSH_AZURE_SUBSCRIPTION"
 )
 
@@ -76,14 +77,27 @@ func (a *Az) Template() string {
 
 func (a *Az) Enabled() bool {
 	source := a.props.GetString(Source, FirstMatch)
-	switch source {
-	case FirstMatch:
-		return a.getCLISubscription() || a.getModuleSubscription()
-	case Pwsh:
-		return a.getModuleSubscription()
-	case Cli:
-		return a.getCLISubscription()
+
+	// migrate first_match
+	if source == "first_match" {
+		source = FirstMatch
 	}
+
+	sources := strings.SplitSeq(source, "|")
+
+	for source := range sources {
+		switch source {
+		case Pwsh:
+			if OK := a.getModuleSubscription(); OK {
+				return OK
+			}
+		case Cli:
+			if OK := a.getCLISubscription(); OK {
+				return OK
+			}
+		}
+	}
+
 	return false
 }
 
@@ -99,7 +113,7 @@ func (a *Az) getCLISubscription() bool {
 		return false
 	}
 	content := a.FileContentWithoutBom(cfg)
-	if len(content) == 0 {
+	if content == "" {
 		return false
 	}
 	var config AzureConfig
@@ -118,7 +132,7 @@ func (a *Az) getCLISubscription() bool {
 
 func (a *Az) getModuleSubscription() bool {
 	envSubscription := a.env.Getenv(azureEnv)
-	if len(envSubscription) == 0 {
+	if envSubscription == "" {
 		return false
 	}
 

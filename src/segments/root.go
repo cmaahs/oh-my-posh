@@ -1,7 +1,7 @@
 package segments
 
 type Root struct {
-	base
+	Base
 }
 
 func (rt *Root) Template() string {

@@ -1,14 +1,19 @@
-set-env POSH_SESSION_ID ::SESSION_ID::
-set-env POSH_THEME ::CONFIG::
 set-env POSH_SHELL elvish
 set-env POSH_SHELL_VERSION $version
 set-env POWERLINE_COMMAND oh-my-posh
+
+# disable all known python virtual environment prompts
+set-env VIRTUAL_ENV_DISABLE_PROMPT 1
+set-env PYENV_VIRTUALENV_DISABLE_PROMPT 1
 
 var _omp_executable = (external ::OMP::)
 var _omp_status = 0
 var _omp_no_status = 1
 var _omp_execution_time = -1
 var _omp_terminal_width = ($_omp_executable get width)
+
+# A flag to simulate a mutex.
+var _omp_primary_ready = $false
 
 fn _omp-after-readline-hook {|_|
     set _omp_execution_time = -1
@@ -52,5 +57,31 @@ fn _omp_get_prompt {|type @arguments|
 
 set edit:after-readline = [ $@edit:after-readline $_omp-after-readline-hook~ ]
 set edit:after-command = [ $@edit:after-command $_omp-after-command-hook~ ]
-set edit:prompt = {|| _omp_get_prompt primary }
-set edit:rprompt = {|| _omp_get_prompt right }
+
+set edit:prompt = {||
+    # Workaround to avoid a race condition in cache access.
+    while $true {
+        if (not $_omp_primary_ready) {
+            break
+        }
+    }
+
+    _omp_get_prompt primary
+
+    # Now it can start to render the right prompt.
+    set _omp_primary_ready = $true
+}
+
+set edit:rprompt = {||
+    # Workaround to avoid a race condition in cache access.
+    while $true {
+        if $_omp_primary_ready {
+            break
+        }
+    }
+
+    _omp_get_prompt right
+
+    # A "prompt rendering period" ends.
+    set _omp_primary_ready = $false
+}

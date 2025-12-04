@@ -10,16 +10,16 @@ import (
 
 var (
 	enabled bool
-	plain   bool
-	log     strings.Builder
+	raw     bool
+
+	log strings.Builder
 )
 
-func Enable() {
+func Enable(plain bool) {
 	enabled = true
-}
+	raw = plain
 
-func Plain() {
-	plain = true
+	Debugf("logging enabled, raw mode: %t", plain)
 }
 
 func Trace(start time.Time, args ...string) {
@@ -29,7 +29,23 @@ func Trace(start time.Time, args ...string) {
 
 	elapsed := time.Since(start)
 	fn, _ := funcSpec()
-	header := fmt.Sprintf("%s(%s) - %s", fn, strings.Join(args, " "), Text(elapsed.String()).Yellow().Plain())
+
+	// Color-code elapsed time based on duration
+	var coloredElapsed Text
+	ms := elapsed.Milliseconds()
+
+	switch {
+	case ms < 1:
+		coloredElapsed = Text(elapsed.String()).Green().Plain()
+	case ms >= 1 && ms < 10:
+		coloredElapsed = Text(elapsed.String()).Yellow().Plain()
+	case ms >= 10 && ms < 100:
+		coloredElapsed = Text(elapsed.String()).Orange().Plain()
+	default: // >= 100ms
+		coloredElapsed = Text(elapsed.String()).Red().Plain()
+	}
+
+	header := fmt.Sprintf("%s(%s) - %s", fn, strings.Join(args, " "), coloredElapsed)
 
 	printLn(trace, header)
 }
@@ -45,7 +61,7 @@ func Debug(message ...string) {
 	printLn(debug, header, strings.Join(message, " "))
 }
 
-func Debugf(format string, args ...interface{}) {
+func Debugf(format string, args ...any) {
 	if !enabled {
 		return
 	}
@@ -64,23 +80,47 @@ func Error(err error) {
 	printLn(bug, header, err.Error())
 }
 
+func Errorf(format string, args ...any) {
+	if !enabled {
+		return
+	}
+
+	Error(fmt.Errorf(format, args...))
+}
+
 func String() string {
 	return log.String()
 }
 
 func funcSpec() (string, int) {
-	pc, file, line, OK := runtime.Caller(3)
-	if !OK {
+	pcs := make([]uintptr, 4)
+	n := runtime.Callers(3, pcs)
+	if n == 0 {
 		return "", 0
 	}
 
-	fn := runtime.FuncForPC(pc).Name()
-	fn = fn[strings.LastIndex(fn, ".")+1:]
-	file = filepath.Base(file)
+	frames := runtime.CallersFrames(pcs[:n])
+	var frame runtime.Frame
+	more := true
 
-	if strings.HasPrefix(fn, "func") {
-		return file, line
+	// Loop through frames until we're out of log.go
+	for more {
+		frame, more = frames.Next()
+		if strings.Contains(frame.File, "log.go") {
+			continue
+		}
+
+		// Found first non-log.go frame
+		fn := frame.Function
+		fn = fn[strings.LastIndex(fn, ".")+1:]
+		file := filepath.Base(frame.File)
+
+		if strings.HasPrefix(fn, "func") {
+			return file, frame.Line
+		}
+
+		return fmt.Sprintf("%s:%s", file, fn), frame.Line
 	}
 
-	return fmt.Sprintf("%s:%s", file, fn), line
+	return "", 0
 }

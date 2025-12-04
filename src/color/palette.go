@@ -11,7 +11,7 @@ type Palette map[Ansi]Ansi
 const (
 	paletteKeyPrefix         = "p:"
 	paletteKeyError          = "palette: requested color %s does not exist in palette of colors %s"
-	paletteMaxRecursionDepth = 3 // allows 3 or less recusive resolutions
+	paletteMaxRecursionDepth = 3 // allows 3 or less recursive resolutions
 	paletteRecursiveKeyError = "palette: recursive resolution of color %s returned palette reference %s and reached recursion depth %d"
 )
 
@@ -90,7 +90,7 @@ func (p *PaletteRecursiveKeyError) Error() string {
 	return errorStr
 }
 
-// maybeResolveColor wraps resolveColor and silences possible errors, returning
+// MaybeResolveColor wraps resolveColor and silences possible errors, returning
 // Transparent color by default, as a Block does not know how to handle color errors.
 func (p Palette) MaybeResolveColor(colorName Ansi) Ansi {
 	color, err := p.ResolveColor(colorName)

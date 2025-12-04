@@ -5,15 +5,16 @@ import (
 	"encoding/xml"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
+	"github.com/gookit/goutil/jsonutil"
 	"github.com/jandedobbeleer/oh-my-posh/src/log"
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/regex"
-	"golang.org/x/exp/slices"
 
-	yaml "github.com/goccy/go-yaml"
 	toml "github.com/pelletier/go-toml/v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 type ProjectItem struct {
@@ -53,7 +54,7 @@ type NuSpec struct {
 }
 
 type Project struct {
-	base
+	Base
 
 	ProjectData
 	Error    string
@@ -66,6 +67,16 @@ func (n *Project) Enabled() bool {
 			Name:    "node",
 			Files:   []string{"package.json"},
 			Fetcher: n.getNodePackage,
+		},
+		{
+			Name:    "deno",
+			Files:   []string{"deno.json", "deno.jsonc"},
+			Fetcher: n.getDenoPackage,
+		},
+		{
+			Name:    "jsr",
+			Files:   []string{"jsr.json", "jsr.jsonc"},
+			Fetcher: n.getJsrPackage,
 		},
 		{
 			Name:    "cargo",
@@ -99,7 +110,7 @@ func (n *Project) Enabled() bool {
 		},
 		{
 			Name:    "dotnet",
-			Files:   []string{"*.sln", "*.slnf", "*.vbproj", "*.fsproj", "*.csproj"},
+			Files:   []string{"*.sln", "*.slnf", "*.slnx", "*.vbproj", "*.fsproj", "*.csproj"},
 			Fetcher: n.getDotnetProject,
 		},
 		{
@@ -115,16 +126,24 @@ func (n *Project) Enabled() bool {
 	}
 
 	for _, item := range n.projects {
-		if n.hasProjectFile(item) {
-			data := item.Fetcher(*item)
-			if data == nil {
-				continue
-			}
-			n.ProjectData = *data
-			n.ProjectData.Type = item.Name
-			return true
+		// allow files override
+		property := properties.Property(fmt.Sprintf("%s_files", item.Name))
+		item.Files = n.props.GetStringArray(property, item.Files)
+
+		if !n.hasProjectFile(item) {
+			continue
 		}
+
+		data := item.Fetcher(*item)
+		if data == nil {
+			continue
+		}
+
+		n.ProjectData = *data
+		n.Type = item.Name
+		return true
 	}
+
 	return n.props.GetBool(properties.AlwaysEnabled, false)
 }
 
@@ -133,25 +152,44 @@ func (n *Project) Template() string {
 }
 
 func (n *Project) hasProjectFile(p *ProjectItem) bool {
-	for _, file := range p.Files {
-		if n.env.HasFiles(file) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(p.Files, n.env.HasFiles)
 }
 
 func (n *Project) getNodePackage(item ProjectItem) *ProjectData {
-	content := n.env.FileContent(item.Files[0])
+	return n.getJSONPackage(item, false)
+}
 
-	var data ProjectData
-	err := json.Unmarshal([]byte(content), &data)
-	if err != nil {
-		n.Error = err.Error()
+func (n *Project) getDenoPackage(item ProjectItem) *ProjectData {
+	data := n.getJSONPackage(item, true)
+	if data == nil {
 		return nil
 	}
 
-	return &data
+	// Deno projects prefer to publish via JSR; merge JSR metadata when available.
+	jsrFile := n.firstExistingFile([]string{"jsr.json", "jsr.jsonc"})
+	if len(jsrFile) == 0 {
+		return data
+	}
+
+	jsrData, err := n.parseJSONPackage(jsrFile, true)
+	if err != nil {
+		log.Error(err)
+		return data
+	}
+
+	if len(jsrData.Version) != 0 {
+		data.Version = jsrData.Version
+	}
+
+	if len(jsrData.Name) != 0 {
+		data.Name = jsrData.Name
+	}
+
+	return data
+}
+
+func (n *Project) getJsrPackage(item ProjectItem) *ProjectData {
+	return n.getJSONPackage(item, true)
 }
 
 func (n *Project) getCargoPackage(item ProjectItem) *ProjectData {
@@ -228,13 +266,18 @@ func (n *Project) getNuSpecPackage(_ ProjectItem) *ProjectData {
 	}
 }
 
-func (n *Project) getDotnetProject(_ ProjectItem) *ProjectData {
+func (n *Project) getDotnetProject(item ProjectItem) *ProjectData {
 	var name string
 	var content string
 	var extension string
 
-	extensions := []string{".sln", ".slnf", ".csproj", ".fsproj", ".vbproj"}
 	files := n.env.LsDir(n.env.Pwd())
+
+	extensions := make([]string, len(item.Files))
+	for i, file := range item.Files {
+		// Remove leading * and keep only the extension
+		extensions[i] = strings.TrimPrefix(file, "*")
+	}
 
 	// get the first match only
 	for _, file := range files {
@@ -256,7 +299,7 @@ func (n *Project) getDotnetProject(_ ProjectItem) *ProjectData {
 		target = values["TFM"]
 	}
 
-	if len(target) == 0 {
+	if target == "" {
 		log.Error(fmt.Errorf("cannot extract TFM from %s project file", name))
 	}
 
@@ -278,14 +321,14 @@ func (n *Project) getPowerShellModuleData(_ ProjectItem) *ProjectData {
 		}
 	}
 
-	if len(content) == 0 {
+	if content == "" {
 		return nil
 	}
 
 	data := &ProjectData{}
-	lines := strings.Split(content, "\n")
+	lines := strings.SplitSeq(content, "\n")
 
-	for _, line := range lines {
+	for line := range lines {
 		splitted := strings.SplitN(line, "=", 2)
 		if len(splitted) < 2 {
 			continue
@@ -316,4 +359,45 @@ func (n *Project) getProjectData(item ProjectItem) *ProjectData {
 	}
 
 	return &data
+}
+
+func (n *Project) getJSONPackage(item ProjectItem, allowJSONC bool) *ProjectData {
+	file := n.firstExistingFile(item.Files)
+	if len(file) == 0 {
+		return nil
+	}
+
+	data, err := n.parseJSONPackage(file, allowJSONC)
+	if err != nil {
+		n.Error = err.Error()
+		return nil
+	}
+
+	return data
+}
+
+func (n *Project) firstExistingFile(files []string) string {
+	for _, file := range files {
+		if !n.env.HasFiles(file) {
+			continue
+		}
+		return file
+	}
+
+	return ""
+}
+
+func (n *Project) parseJSONPackage(file string, allowJSONC bool) (*ProjectData, error) {
+	content := n.env.FileContent(file)
+	if allowJSONC && filepath.Ext(file) == ".jsonc" {
+		content = jsonutil.StripComments(content)
+	}
+
+	var data ProjectData
+	err := json.Unmarshal([]byte(content), &data)
+	if err != nil {
+		return nil, err
+	}
+
+	return &data, nil
 }

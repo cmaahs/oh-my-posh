@@ -33,6 +33,7 @@ import Config from "@site/src/components/Config.js";
 | `trailing_diamond` | `string`  |
 | `segments`         | `array`   |
 | `force`            | `boolean` |
+| `index`            | `int`     |
 
 ### Type
 
@@ -40,7 +41,7 @@ Tells the engine what to do with the block. There are two options:
 
 - `prompt` renders one or more segments
 - `rprompt` renders one or more segments aligned to the right of the cursor. Only one `rprompt` block is permitted.
-  Supported on zsh, PowerShell, cmd, nu and fish.
+  Supported on bash (with [ble.sh]), zsh, PowerShell, cmd, nu and fish.
 
 ### Newline
 
@@ -119,5 +120,12 @@ Array of one or more [segments][segment].
 
 When set to `true`, the block will always be rendered, even if all segments are empty. Defaults to `false`.
 
+### Index
+
+The index of the block in the configuration. This is used to [override] a specific block in a base configuration.
+This is a 1-based index, so the first block has an index of `1`.
+
+[ble.sh]: https://github.com/akinomyoga/ble.sh
 [color-overrides]: /docs/configuration/colors#color-overrides
 [segment]: segment.mdx
+[override]: /docs/configuration/general#extends

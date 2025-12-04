@@ -1,7 +1,7 @@
 package segments
 
 type Flutter struct {
-	language
+	Language
 }
 
 func (f *Flutter) Template() string {
@@ -13,6 +13,11 @@ func (f *Flutter) Enabled() bool {
 	f.folders = dartFolders
 	f.commands = []*cmd{
 		{
+			executable: "fvm",
+			args:       []string{"flutter", "--version"},
+			regex:      `Flutter (?P<version>((?P<major>[0-9]+).(?P<minor>[0-9]+).(?P<patch>[0-9]+)))`,
+		},
+		{
 			executable: "flutter",
 			args:       []string{"--version"},
 			regex:      `Flutter (?P<version>((?P<major>[0-9]+).(?P<minor>[0-9]+).(?P<patch>[0-9]+)))`,
@@ -20,5 +25,5 @@ func (f *Flutter) Enabled() bool {
 	}
 	f.versionURLTemplate = "https://github.com/flutter/flutter/releases/tag/{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
 
-	return f.language.Enabled()
+	return f.Language.Enabled()
 }

@@ -91,7 +91,7 @@ func TestSetCommitContext(t *testing.T) {
 		env.On("RunCommand", "sl", []string{"log", "--limit", "1", "--template", SLCOMMITTEMPLATE}).Return(tc.Output, tc.Error)
 
 		sl := &Sapling{
-			scm: scm{
+			Scm: Scm{
 				command: SAPLINGCOMMAND,
 			},
 		}
@@ -151,9 +151,9 @@ func TestShouldDisplay(t *testing.T) {
 		got := sl.shouldDisplay()
 		assert.Equal(t, tc.Expected, got, tc.Case)
 		if tc.Expected {
-			assert.Equal(t, "/sapling/repo/.sl", sl.workingDir, tc.Case)
-			assert.Equal(t, "/sapling/repo/.sl", sl.rootDir, tc.Case)
-			assert.Equal(t, "/sapling/repo", sl.realDir, tc.Case)
+			assert.Equal(t, "/sapling/repo/.sl", sl.mainSCMDir, tc.Case)
+			assert.Equal(t, "/sapling/repo/.sl", sl.scmDir, tc.Case)
+			assert.Equal(t, "/sapling/repo", sl.repoRootDir, tc.Case)
 			assert.Equal(t, "repo", sl.RepoName, tc.Case)
 		}
 	}
@@ -216,7 +216,7 @@ func TestSetHeadContext(t *testing.T) {
 		}
 
 		sl := &Sapling{
-			scm: scm{
+			Scm: Scm{
 				command: SAPLINGCOMMAND,
 			},
 		}

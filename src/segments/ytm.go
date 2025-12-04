@@ -2,20 +2,24 @@ package segments
 
 import (
 	"encoding/json"
+	"errors"
+	httplib "net/http"
 
+	"github.com/jandedobbeleer/oh-my-posh/src/cache"
+	"github.com/jandedobbeleer/oh-my-posh/src/cli/auth"
+	"github.com/jandedobbeleer/oh-my-posh/src/log"
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 )
 
+const (
+	ytmdaStatusURL = auth.YTMDABASEURL + "/state"
+)
+
 type Ytm struct {
-	base
+	Base
 
 	MusicPlayer
 }
-
-const (
-	// APIURL is the YTMDA Remote Control API URL property.
-	APIURL properties.Property = "api_url"
-)
 
 func (y *Ytm) Template() string {
 	return " {{ .Icon }}{{ if ne .Status \"stopped\" }}{{ .Artist }} - {{ .Track }}{{ end }} "
@@ -23,64 +27,71 @@ func (y *Ytm) Template() string {
 
 func (y *Ytm) Enabled() bool {
 	err := y.setStatus()
-	// If we don't get a response back (error), the user isn't running
-	// YTMDA, or they don't have the RC API enabled.
+	if err != nil {
+		log.Error(err)
+	}
+
 	return err == nil
 }
 
 type ytmdaStatusResponse struct {
-	track  `json:"track"`
-	player `json:"player"`
-}
-
-type player struct {
-	SeekbarCurrentPositionHuman string  `json:"seekbarCurrentPositionHuman"`
-	LikeStatus                  string  `json:"likeStatus"`
-	RepeatType                  string  `json:"repeatType"`
-	VolumePercent               int     `json:"volumePercent"`
-	SeekbarCurrentPosition      int     `json:"seekbarCurrentPosition"`
-	StatePercent                float64 `json:"statePercent"`
-	HasSong                     bool    `json:"hasSong"`
-	IsPaused                    bool    `json:"isPaused"`
-}
-
-type track struct {
-	Author          string `json:"author"`
-	Title           string `json:"title"`
-	Album           string `json:"album"`
-	Cover           string `json:"cover"`
-	DurationHuman   string `json:"durationHuman"`
-	URL             string `json:"url"`
-	ID              string `json:"id"`
-	Duration        int    `json:"duration"`
-	IsVideo         bool   `json:"isVideo"`
-	IsAdvertisement bool   `json:"isAdvertisement"`
-	InLibrary       bool   `json:"inLibrary"`
+	Video struct {
+		Author string `json:"author"`
+		Title  string `json:"title"`
+	} `json:"video"`
+	Player struct {
+		TrackState int  `json:"trackState"`
+		AdPlaying  bool `json:"adPlaying"`
+	} `json:"player"`
 }
 
 func (y *Ytm) setStatus() error {
-	// https://github.com/ytmdesktop/ytmdesktop/wiki/Remote-Control-API
-	url := y.props.GetString(APIURL, "http://127.0.0.1:9863")
-	httpTimeout := y.props.GetInt(APIURL, properties.DefaultHTTPTimeout)
-	body, err := y.env.HTTPRequest(url+"/query", nil, httpTimeout)
+	token, OK := cache.Get[string](cache.Device, auth.YTMDATOKEN)
+	if !OK || token == "" {
+		return errors.New("YTMDA token not found, please authenticate using `oh-my-posh auth ytmda`")
+	}
+
+	status, err := y.requestStatus(token)
 	if err != nil {
 		return err
 	}
-	q := new(ytmdaStatusResponse)
-	err = json.Unmarshal(body, &q)
-	if err != nil {
-		return err
-	}
-	y.Status = playing
-	y.Icon = y.props.GetString(PlayingIcon, "\uE602 ")
-	if !q.player.HasSong {
+
+	switch status.Player.TrackState {
+	case 1, 2: // playing or buffering
+		y.Status = playing
+		y.Icon = y.props.GetString(PlayingIcon, "\uf04b ")
+	case -1: // stopped
 		y.Status = stopped
-		y.Icon = y.props.GetString(StoppedIcon, "\uF04D ")
-	} else if q.player.IsPaused {
+		y.Icon = y.props.GetString(StoppedIcon, "\uf04d ")
+	default: // paused
 		y.Status = paused
-		y.Icon = y.props.GetString(PausedIcon, "\uF8E3 ")
+		y.Icon = y.props.GetString(PausedIcon, "\uf04c ")
 	}
-	y.Artist = q.track.Author
-	y.Track = q.track.Title
+
+	if status.Player.AdPlaying {
+		ad := y.props.GetString(AdIcon, "\ueebb ")
+		y.Icon = ad + y.Icon
+	}
+
+	y.Artist = status.Video.Author
+	y.Track = status.Video.Title
+
 	return nil
+}
+
+func (y *Ytm) requestStatus(token string) (*ytmdaStatusResponse, error) {
+	setHeaders := func(request *httplib.Request) {
+		request.Header.Set("Authorization", token)
+		request.Header.Set("Content-Type", "application/json")
+	}
+
+	httpTimeout := y.props.GetInt(properties.HTTPTimeout, 5000)
+	response, err := y.env.HTTPRequest(ytmdaStatusURL, nil, httpTimeout, setHeaders)
+	if err != nil {
+		return nil, err
+	}
+
+	var result ytmdaStatusResponse
+	err = json.Unmarshal(response, &result)
+	return &result, err
 }

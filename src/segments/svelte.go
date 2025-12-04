@@ -1,7 +1,7 @@
 package segments
 
 type Svelte struct {
-	language
+	Language
 }
 
 func (s *Svelte) Template() string {
@@ -18,7 +18,7 @@ func (s *Svelte) Enabled() bool {
 	}
 	s.versionURLTemplate = "https://github.com/sveltejs/svelte/releases/tag/svelte%40{{.Full}}"
 
-	return s.language.Enabled()
+	return s.Language.Enabled()
 }
 
 func (s *Svelte) getVersion() (string, error) {

@@ -12,11 +12,10 @@ import (
 const (
 	ParseKubeConfig properties.Property = "parse_kubeconfig"
 	ContextAliases  properties.Property = "context_aliases"
-	kubectlCacheKey                     = "kubectl"
 )
 
 type Kubectl struct {
-	base
+	Base
 
 	KubeContext
 	Context string
@@ -63,7 +62,7 @@ func (k *Kubectl) doParseKubeConfig() bool {
 	k.Context = ""
 
 	for _, kubeconfig := range kubeconfigs {
-		if len(kubeconfig) == 0 {
+		if kubeconfig == "" {
 			continue
 		}
 
@@ -81,7 +80,7 @@ func (k *Kubectl) doParseKubeConfig() bool {
 			}
 		}
 
-		if len(k.Context) == 0 {
+		if k.Context == "" {
 			k.Context = config.CurrentContext
 		}
 
@@ -143,7 +142,7 @@ func (k *Kubectl) doCallKubectl() bool {
 }
 
 func (k *Kubectl) setError(message string) {
-	if len(k.Context) == 0 {
+	if k.Context == "" {
 		k.Context = message
 	}
 

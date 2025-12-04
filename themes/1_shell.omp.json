@@ -28,7 +28,6 @@
           "foreground": "#ee79d1",
           "properties": {
             "branch_icon": "\ue725 ",
-            "fetch_stash_count": true,
             "fetch_status": true,
             "fetch_upstream_icon": true,
             "fetch_worktree_count": true
@@ -69,7 +68,7 @@
         {
           "foreground": "#94ffa2",
           "style": "diamond",
-          "template": " <#ffffff>MEM:</> {{ round .PhysicalPercentUsed .Precision }}% ({{ (div ((sub .PhysicalTotalMemory .PhysicalFreeMemory)|float64) 1073741824.0) }}/{{ (div .PhysicalTotalMemory 1073741824.0) }}GB)",
+          "template": " <#ffffff>MEM:</> {{ round .PhysicalPercentUsed .Precision }}% ({{ (div ((sub .PhysicalTotalMemory .PhysicalAvailableMemory)|float64) 1073741824.0) }}/{{ (div .PhysicalTotalMemory 1073741824.0) }}GB)",
           "type": "sysinfo"
         }
       ],

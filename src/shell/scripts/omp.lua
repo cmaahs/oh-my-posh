@@ -3,8 +3,11 @@
 ---@diagnostic disable: lowercase-global
 
 -- Environment variables
-os.setenv('POSH_SESSION_ID', '::SESSION_ID::')
 os.setenv('POSH_SHELL', 'cmd')
+
+-- disable all known python virtual environment prompts
+os.setenv('VIRTUAL_ENV_DISABLE_PROMPT', '1')
+os.setenv('PYENV_VIRTUALENV_DISABLE_PROMPT', '1')
 
 -- Helper functions
 
@@ -66,7 +69,6 @@ local omp_executable = '::OMP::'
 
 -- Configuration
 
-os.setenv('POSH_THEME', '::CONFIG::')
 os.setenv('POSH_SHELL_VERSION', string.format('clink v%s.%s.%s.%s', clink.version_major, clink.version_minor, clink.version_patch, clink.version_commit))
 
 -- Execution helpers
@@ -80,10 +82,31 @@ end
 local function run_posh_command(command)
     command = string.format('""%s" %s"', omp_executable, command)
     local _, is_main = coroutine.running()
+    local f, msg
     if is_main then
-        return io.popen(command):read('*a')
+        f, msg = io.popen(command)
+    else
+        f, msg = io.popenyield(command)
     end
-    return io.popenyield(command):read('*a')
+    local output = ''
+    if f then
+        output = f:read('*a')
+        f:close()
+    else
+        if msg and msg:sub(1, #command) == command then
+            msg = msg:sub(#command + 1)
+            msg = msg:gsub('^: +', '')
+            if msg == '' then
+                msg = nil
+            end
+        end
+        local cwd = os.getcwd()
+        cwd = cwd and (' in ' .. cwd) or ''
+        msg = msg and (' (' .. msg .. ')') or ''
+        log.info(string.format('Unable to run oh-my-posh%s%s.', msg, cwd))
+        log.info(command)
+    end
+    return output
 end
 
 -- Duration functions
@@ -101,10 +124,12 @@ end
 local function duration_onbeginedit()
     last_duration = 0
     if endedit_time ~= 0 then
-        local beginedit_time = os_clock_millis()
-        local elapsed = beginedit_time - endedit_time
-        if elapsed >= 0 then
-            last_duration = elapsed
+        local beginedit_time = tonumber(os_clock_millis())
+        if beginedit_time then
+            local elapsed = beginedit_time - endedit_time
+            if elapsed >= 0 then
+                last_duration = elapsed
+            end
         end
     end
 end
@@ -113,7 +138,10 @@ local function duration_onendedit(input)
     endedit_time = 0
     -- For an empty command, the execution time should not be evaluated.
     if string.gsub(input, '^%s*(.-)%s*$', '%1') ~= '' then
-        endedit_time = os_clock_millis()
+        local m = tonumber(os_clock_millis())
+        if m then
+            endedit_time = m
+        end
     end
 end
 
@@ -178,7 +206,9 @@ local function display_cached_prompt()
 end
 
 local function command_executed_mark(input)
-    no_exit_code = string.gsub(input, '^%s*(.-)%s*$', '%1') == ''
+    if string.gsub(input, '^%s*(.-)%s*$', '%1') ~= '' then
+        no_exit_code = false
+    end
     if ftcs_marks_enabled then
         clink.print('\x1b]133;C\007', NONL)
     end
@@ -229,6 +259,10 @@ function p:filter(prompt)
                 cached_prompt.right = get_posh_prompt('right')
             end
         end
+    end
+
+    if cached_prompt.left == nil or cached_prompt.left == '' then
+        cached_prompt.left = string.format('Unable to get prompt text; see clink.log file for details.\n%s>', os.getcwd() or '')
     end
 
     return cached_prompt.left

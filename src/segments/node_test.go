@@ -10,10 +10,10 @@ import (
 )
 
 func TestNodeMatchesVersionFile(t *testing.T) {
-	nodeVersion := version{
-		Full:  "20.14.0",
-		Major: "20",
-		Minor: "14",
+	nodeVersion := Version{
+		Full:  "22.17.0",
+		Major: "22",
+		Minor: "17",
 		Patch: "0",
 	}
 	cases := []struct {
@@ -23,16 +23,16 @@ func TestNodeMatchesVersionFile(t *testing.T) {
 		Expected        bool
 	}{
 		{Case: "no file context", Expected: true, RCVersion: ""},
-		{Case: "version match", Expected: true, ExpectedVersion: "20.14.0", RCVersion: "20.14.0"},
-		{Case: "version match with newline", Expected: true, ExpectedVersion: "20.14.0", RCVersion: "20.14.0\n"},
+		{Case: "version match", Expected: true, ExpectedVersion: "22.17.0", RCVersion: "22.17.0"},
+		{Case: "version match with newline", Expected: true, ExpectedVersion: "22.17.0", RCVersion: "22.17.0\n"},
 		{Case: "version mismatch", Expected: false, ExpectedVersion: "3.2.1", RCVersion: "3.2.1"},
-		{Case: "version match in other format", Expected: true, ExpectedVersion: "20.14.0", RCVersion: "v20.14.0"},
-		{Case: "version match without patch", Expected: true, ExpectedVersion: "20.14", RCVersion: "20.14"},
-		{Case: "version match without patch in other format", Expected: true, ExpectedVersion: "20.14", RCVersion: "v20.14"},
-		{Case: "version match without minor", Expected: true, ExpectedVersion: "20", RCVersion: "20"},
-		{Case: "version match without minor in other format", Expected: true, ExpectedVersion: "20", RCVersion: "v20"},
-		{Case: "lts match", Expected: true, ExpectedVersion: "20.14.0", RCVersion: "lts/iron"},
-		{Case: "lts match upper case", Expected: true, ExpectedVersion: "20.14.0", RCVersion: "lts/Iron"},
+		{Case: "version match in other format", Expected: true, ExpectedVersion: "22.17.0", RCVersion: "v22.17.0"},
+		{Case: "version match without patch", Expected: true, ExpectedVersion: "22.17", RCVersion: "22.17"},
+		{Case: "version match without patch in other format", Expected: true, ExpectedVersion: "22.17", RCVersion: "v22.17"},
+		{Case: "version match without minor", Expected: true, ExpectedVersion: "22", RCVersion: "22"},
+		{Case: "version match without minor in other format", Expected: true, ExpectedVersion: "22", RCVersion: "v22"},
+		{Case: "lts match", Expected: true, ExpectedVersion: "22.17.0", RCVersion: "lts/jod"},
+		{Case: "lts match upper case", Expected: true, ExpectedVersion: "22.17.0", RCVersion: "lts/Jod"},
 		{Case: "lts mismatch", Expected: false, ExpectedVersion: "8.17.0", RCVersion: "lts/carbon"},
 	}
 
@@ -41,8 +41,8 @@ func TestNodeMatchesVersionFile(t *testing.T) {
 		env.On("FileContent", ".nvmrc").Return(tc.RCVersion)
 
 		node := &Node{
-			language: language{
-				version: nodeVersion,
+			Language: Language{
+				Version: nodeVersion,
 			},
 		}
 		node.Init(properties.Map{}, env)
@@ -61,6 +61,7 @@ func TestNodeInContext(t *testing.T) {
 		hasYarn        bool
 		hasNPM         bool
 		hasDefault     bool
+		hasBun         bool
 		PkgMgrEnabled  bool
 	}{
 		{Case: "no package manager file", ExpectedString: "", PkgMgrEnabled: true},
@@ -73,6 +74,7 @@ func TestNodeInContext(t *testing.T) {
 		{Case: "pnpm and npm", hasPNPM: true, hasNPM: true, ExpectedString: "pnpm", PkgMgrEnabled: true},
 		{Case: "yarn and npm", hasYarn: true, hasNPM: true, ExpectedString: "yarn", PkgMgrEnabled: true},
 		{Case: "pnpm, yarn, and npm", hasPNPM: true, hasYarn: true, hasNPM: true, ExpectedString: "pnpm", PkgMgrEnabled: true},
+		{Case: "bun", hasBun: true, ExpectedString: "bun", PkgMgrEnabled: true},
 	}
 
 	for _, tc := range cases {
@@ -81,11 +83,14 @@ func TestNodeInContext(t *testing.T) {
 		env.On("HasFiles", "yarn.lock").Return(tc.hasYarn)
 		env.On("HasFiles", "package-lock.json").Return(tc.hasNPM)
 		env.On("HasFiles", "package.json").Return(tc.hasDefault)
+		env.On("HasFiles", "bun.lockb").Return(tc.hasBun)
+		env.On("HasFiles", "bun.lock").Return(tc.hasBun)
 
 		props := properties.Map{
 			PnpmIcon:            "pnpm",
 			YarnIcon:            "yarn",
 			NPMIcon:             "npm",
+			BunIcon:             "bun",
 			FetchPackageManager: tc.PkgMgrEnabled,
 		}
 

@@ -42,8 +42,7 @@
           "background": "#256C9D",
           "foreground": "#ffffff",
           "properties": {
-            "branch_max_length": 30,
-            "fetch_stash_count": false,
+            "branch_template": "{{ trunc 30 .Branch }}",
             "fetch_status": true,
             "fetch_upstream_icon": true
           },

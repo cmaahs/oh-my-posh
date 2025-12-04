@@ -2,7 +2,7 @@ const path = require('path');
 
 module.exports = {
   title: 'Oh My Posh',
-  tagline: 'A prompt theme engine for any shell.',
+  tagline: 'The most customizable and fastest prompt engine for any shell.',
   url: 'https://ohmyposh.dev',
   baseUrl: '/',
   favicon: 'img/favicons.svg',
@@ -10,8 +10,7 @@ module.exports = {
   projectName: 'oh-my-posh',
   onBrokenLinks: 'ignore',
   plugins: [
-    path.resolve(__dirname, 'plugins', 'appinsights'),
-    'docusaurus-node-polyfills'
+    path.resolve(__dirname, 'plugins', 'appinsights')
   ],
   stylesheets: [
     "https://rsms.me/inter/inter.css",
@@ -25,6 +24,11 @@ module.exports = {
     },
     prism: {
       additionalLanguages: ['powershell', 'lua', 'jsstacktrace', 'toml', 'json', 'yaml'],
+    },
+    docs: {
+        sidebar: {
+          hideable: true,
+        },
     },
     navbar: {
       title: 'Oh My Posh',
@@ -67,9 +71,9 @@ module.exports = {
           position: 'right',
         },
         {
-          href: 'https://www.gitkraken.com/invite/nQmDPR9D',
-          className: 'header-gk-link',
-          'aria-label': 'GitKraken',
+          href: 'https://www.warp.dev/oh-my-posh',
+          className: 'header-affiliate-link',
+          'aria-label': 'Warp',
           position: 'right',
         },
         {
@@ -131,8 +135,8 @@ module.exports = {
               href: 'https://polar.sh/oh-my-posh',
             },
             {
-              label: 'GitKraken',
-              href: 'https://www.gitkraken.com/invite/nQmDPR9D',
+              label: 'Warp',
+              href: 'https://www.warp.dev/oh-my-posh',
             },
             {
               label: 'Docusaurus',

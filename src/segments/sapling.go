@@ -52,7 +52,7 @@ type Sapling struct {
 	Author      string
 	Bookmark    string
 	Description string
-	scm
+	Scm
 	New bool
 }
 
@@ -82,11 +82,11 @@ func (sl *Sapling) shouldDisplay() bool {
 		return false
 	}
 
-	sl.workingDir = slDir.Path
-	sl.rootDir = slDir.Path
+	sl.mainSCMDir = slDir.Path
+	sl.scmDir = slDir.Path
 	// convert the worktree file path to a windows one when in a WSL shared folder
-	sl.realDir = strings.TrimSuffix(sl.convertToWindowsPath(slDir.Path), "/.sl")
-	sl.RepoName = path.Base(sl.convertToLinuxPath(sl.realDir))
+	sl.repoRootDir = strings.TrimSuffix(sl.convertToWindowsPath(slDir.Path), "/.sl")
+	sl.RepoName = path.Base(sl.convertToLinuxPath(sl.repoRootDir))
 	sl.setDir(slDir.Path)
 
 	return true
@@ -124,13 +124,13 @@ func (sl *Sapling) setHeadContext() {
 	}
 
 	changes := sl.getSaplingCommandOutput("status")
-	if len(changes) == 0 {
+	if changes == "" {
 		return
 	}
-	lines := strings.Split(changes, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(changes, "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
-		if len(line) == 0 {
+		if line == "" {
 			continue
 		}
 		// element is the element from someSlice for where we are
@@ -140,12 +140,12 @@ func (sl *Sapling) setHeadContext() {
 
 func (sl *Sapling) setCommitContext() {
 	body := sl.getSaplingCommandOutput("log", "--limit", "1", "--template", SLCOMMITTEMPLATE)
-	if len(body) == 0 {
+	if body == "" {
 		sl.New = true
 		return
 	}
-	splitted := strings.Split(strings.TrimSpace(body), "\n")
-	for _, line := range splitted {
+	splitted := strings.SplitSeq(strings.TrimSpace(body), "\n")
+	for line := range splitted {
 		line = strings.TrimSpace(line)
 		if len(line) <= 3 {
 			continue

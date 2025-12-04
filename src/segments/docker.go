@@ -3,6 +3,15 @@ package segments
 import (
 	"encoding/json"
 	"path/filepath"
+
+	"slices"
+
+	"github.com/jandedobbeleer/oh-my-posh/src/properties"
+)
+
+const (
+	// FetchContext is the property used to fetch the current docker context
+	FetchContext properties.Property = "fetch_context"
 )
 
 type DockerConfig struct {
@@ -10,7 +19,7 @@ type DockerConfig struct {
 }
 
 type Docker struct {
-	base
+	Base
 
 	Context string
 }
@@ -37,6 +46,37 @@ func (d *Docker) configFiles() []string {
 }
 
 func (d *Docker) Enabled() bool {
+	extensions := []string{
+		"compose.yml",
+		"compose.yaml",
+		"docker-compose.yml",
+		"docker-compose.yaml",
+		"Dockerfile",
+	}
+
+	extensions = d.props.GetStringArray(LanguageExtensions, extensions)
+
+	displayMode := d.props.GetString(DisplayMode, DisplayModeContext)
+	switch displayMode {
+	case DisplayModeContext:
+		return d.fetchContext()
+	case DisplayModeFiles:
+		if !slices.ContainsFunc(extensions, d.env.HasFiles) {
+			return false
+		}
+
+		// always respect the context fetching
+		if d.props.GetBool(FetchContext, true) {
+			_ = d.fetchContext()
+		}
+
+		return true
+	}
+
+	return false
+}
+
+func (d *Docker) fetchContext() bool {
 	// Check if there is a non-empty environment variable named `DOCKER_HOST` or `DOCKER_CONTEXT`
 	// These variables are set by the docker CLI and override the config file
 	// Return the current context if it is not empty and not `default`
@@ -52,7 +92,7 @@ func (d *Docker) Enabled() bool {
 	// Return the current context if it is not empty and not `default`
 	for _, f := range d.configFiles() {
 		data := d.env.FileContent(f)
-		if len(data) == 0 {
+		if data == "" {
 			continue
 		}
 

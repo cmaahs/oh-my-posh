@@ -2,7 +2,9 @@ package template
 
 import (
 	"sync"
+	"text/template"
 
+	"github.com/jandedobbeleer/oh-my-posh/src/generics"
 	"github.com/jandedobbeleer/oh-my-posh/src/maps"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime"
 )
@@ -19,47 +21,31 @@ const (
 )
 
 var (
-	shell          string
-	env            runtime.Environment
-	knownVariables []string
+	shell       string
+	env         runtime.Environment
+	knownFields sync.Map
+	textPool    *generics.Pool[*Text]
 )
 
-func Init(environment runtime.Environment, vars maps.Simple) {
+func Init(environment runtime.Environment, vars maps.Simple[any], aliases *maps.Config) {
 	env = environment
 	shell = env.Shell()
+	knownFields = sync.Map{}
 
-	renderPool = sync.Pool{
-		New: func() any {
-			return newTextPoolObject()
-		},
-	}
+	renderPool = generics.NewPool(func() *renderer {
+		return &renderer{
+			template: template.New("cache").Funcs(funcMap()),
+			context:  &context{},
+		}
+	})
 
-	knownVariables = []string{
-		"Root",
-		"PWD",
-		"AbsolutePWD",
-		"PSWD",
-		"Folder",
-		"Shell",
-		"ShellVersion",
-		"UserName",
-		"HostName",
-		"Code",
-		"Env",
-		"OS",
-		"WSL",
-		"PromptCount",
-		"Segments",
-		"SHLVL",
-		"Templates",
-		"Var",
-		"Data",
-		"Jobs",
-	}
+	textPool = generics.NewPool(func() *Text {
+		return &Text{}
+	})
 
 	if Cache != nil {
 		return
 	}
 
-	loadCache(vars)
+	loadCache(vars, aliases)
 }

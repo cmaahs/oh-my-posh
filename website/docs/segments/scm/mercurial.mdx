@@ -31,7 +31,7 @@ import Config from "@site/src/components/Config.js";
 ### Fetching information
 
 As doing Mercurial (hg) calls can slow down the prompt experience, we do not fetch information by default.
-You can set the following properties to `true` to enable fetching additional information (and populate the template).
+You can set `fetch_status` to `true` to enable fetching additional information (and populate the template).
 
 | Name              |        Type         | Default | Description                                                                                                                                                                                                                                                      |
 | ----------------- | :-----------------: | :-----: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -55,7 +55,6 @@ hg {{.Branch}} {{if .LocalCommitNumber}}({{.LocalCommitNumber}}:{{.ChangeSetIDSh
 | ------------------- | ---------- | ----------------------------------------------------- |
 | `.Working`          | `Status`   | changes in the worktree (see below)                   |
 | `.IsTip`            | `boolean`  | Current commit is the tip commit                      |
-| `.ChangeSetID`      | `string`   | The current local commit number                       |
 | `.ChangeSetID`      | `string`   | The current local commit number                       |
 | `.ChangeSetIDShort` | `string`   | The current local commit number                       |
 | `.Branch`           | `string`   | current branch (releative URL reported by `svn info`) |

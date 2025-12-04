@@ -6,7 +6,7 @@ import (
 )
 
 type Os struct {
-	base
+	Base
 
 	Icon string
 }
@@ -18,6 +18,8 @@ const (
 	Linux properties.Property = "linux"
 	// Windows the string/icon to use for windows
 	Windows properties.Property = "windows"
+	// Android the string/icon to use for android
+	Android properties.Property = "android"
 	// DisplayDistroName display the distro name or not
 	DisplayDistroName properties.Property = "display_distro_name"
 )
@@ -33,7 +35,7 @@ func (oi *Os) Enabled() bool {
 		oi.Icon = oi.props.GetString(Windows, "\uE62A")
 	case runtime.DARWIN:
 		oi.Icon = oi.props.GetString(MacOS, "\uF179")
-	case runtime.LINUX:
+	case runtime.LINUX, runtime.FREEBSD:
 		pf := oi.env.Platform()
 		displayDistroName := oi.props.GetBool(DisplayDistroName, false)
 		if displayDistroName {
@@ -41,6 +43,8 @@ func (oi *Os) Enabled() bool {
 			break
 		}
 		oi.Icon = oi.getDistroIcon(pf)
+	case runtime.ANDROID:
+		oi.Icon = oi.props.GetString(Android, "\ue70e")
 	default:
 		oi.Icon = goos
 	}
@@ -53,7 +57,7 @@ func (oi *Os) getDistroIcon(distro string) string {
 		"almalinux":           "\uF31D",
 		"almalinux9":          "\uF31D",
 		"alpine":              "\uF300",
-		"android":             "\uF17b",
+		"android":             "\ue70e",
 		"aosc":                "\uF301",
 		"arch":                "\uF303",
 		"centos":              "\uF304",
@@ -64,7 +68,9 @@ func (oi *Os) getDistroIcon(distro string) string {
 		"elementary":          "\uF309",
 		"endeavouros":         "\uF322",
 		"fedora":              "\uF30a",
+		"freebsd":             "\U000f08e0",
 		"gentoo":              "\uF30d",
+		"kali":                "\uf327",
 		"mageia":              "\uF310",
 		"manjaro":             "\uF312",
 		"mint":                "\uF30e",
@@ -77,6 +83,7 @@ func (oi *Os) getDistroIcon(distro string) string {
 		"sabayon":             "\uF317",
 		"slackware":           "\uF319",
 		"ubuntu":              "\uF31b",
+		"neon":                "\uf331",
 	}
 
 	if icon, ok := iconMap[distro]; ok {

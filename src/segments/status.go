@@ -6,6 +6,7 @@ import (
 
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/template"
+	"github.com/jandedobbeleer/oh-my-posh/src/text"
 )
 
 const (
@@ -14,13 +15,11 @@ const (
 )
 
 type Status struct {
-	base
+	Base
 
-	template *template.Text
-	String   string
-	Meaning  string
-	Code     int
-	Error    bool
+	String  string
+	Meaning string
+	Error   bool
 }
 
 func (s *Status) Template() string {
@@ -43,34 +42,37 @@ func (s *Status) Enabled() bool {
 
 func (s *Status) formatStatus(status int, pipeStatus string) string {
 	statusTemplate := s.props.GetString(StatusTemplate, "{{ .Code }}")
-	s.template = &template.Text{
-		Template: statusTemplate,
-	}
 
 	if status != 0 {
 		s.Error = true
 	}
 
-	if len(pipeStatus) == 0 {
-		s.Code = status
-		s.template.Context = s
-		if text, err := s.template.Render(); err == nil {
-			return text
+	if pipeStatus == "" {
+		if txt, err := template.Render(statusTemplate, s); err == nil {
+			return txt
 		}
+
 		return strconv.Itoa(status)
 	}
 
 	StatusSeparator := s.props.GetString(StatusSeparator, "|")
 
-	var builder strings.Builder
+	builder := text.NewBuilder()
+
+	// use an anaonymous struct to avoid
+	// confusion with the template context
+	// that already has a .Code global property
+	var context struct {
+		Code int
+	}
 
 	splitted := strings.Split(pipeStatus, " ")
 	for i, codeStr := range splitted {
-		write := func(text string) {
+		write := func(txt string) {
 			if i > 0 {
 				builder.WriteString(StatusSeparator)
 			}
-			builder.WriteString(text)
+			builder.WriteString(txt)
 		}
 
 		code, err := strconv.Atoi(codeStr)
@@ -83,15 +85,15 @@ func (s *Status) formatStatus(status int, pipeStatus string) string {
 			s.Error = true
 		}
 
-		s.Code = code
-		s.template.Context = s
-		text, err := s.template.Render()
+		context.Code = code
+
+		txt, err := template.Render(statusTemplate, context)
 		if err != nil {
 			write(codeStr)
 			continue
 		}
 
-		write(text)
+		write(txt)
 	}
 
 	return builder.String()

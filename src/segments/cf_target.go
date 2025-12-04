@@ -8,7 +8,7 @@ import (
 )
 
 type CfTarget struct {
-	base
+	Base
 
 	CfTargetDetails
 }
@@ -54,8 +54,8 @@ func (c *CfTarget) setCFTargetStatus() bool {
 		return false
 	}
 
-	lines := strings.Split(output, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(output, "\n")
+	for line := range lines {
 		splitted := strings.SplitN(line, ":", 2)
 		if len(splitted) < 2 {
 			continue
@@ -84,7 +84,7 @@ func (c *CfTarget) getCFTargetCommandOutput() (string, error) {
 		return "", err
 	}
 
-	if len(output) == 0 {
+	if output == "" {
 		return "", errors.New("cf command output is empty")
 	}
 

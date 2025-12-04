@@ -56,11 +56,7 @@ func (e *Engine) ExtraPrompt(promptType ExtraPromptType) string {
 		}
 	}
 
-	tmpl := &template.Text{
-		Template: getTemplate(prompt.Template),
-	}
-
-	promptText, err := tmpl.Render()
+	promptText, err := template.Render(getTemplate(prompt.Template), nil)
 	if err != nil {
 		promptText = err.Error()
 	}
@@ -103,7 +99,7 @@ func (e *Engine) ExtraPrompt(promptType ExtraPromptType) string {
 			prompt += "\nRPROMPT=''"
 			return prompt
 		}
-	case shell.PWSH, shell.PWSH5:
+	case shell.PWSH:
 		if promptType == Transient {
 			// clear the line afterwards to prevent text from being written on the same line
 			// see https://github.com/JanDeDobbeleer/oh-my-posh/issues/3628

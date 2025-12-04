@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/log"
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
@@ -13,6 +15,11 @@ import (
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/path"
 	"github.com/jandedobbeleer/oh-my-posh/src/shell"
 	"github.com/jandedobbeleer/oh-my-posh/src/template"
+	"github.com/jandedobbeleer/oh-my-posh/src/text"
+)
+
+const (
+	regexPrefix = "re:"
 )
 
 type Folder struct {
@@ -33,8 +40,12 @@ func (f Folders) List() []string {
 	return list
 }
 
+func (f Folders) Last() *Folder {
+	return f[len(f)-1]
+}
+
 type Path struct {
-	base
+	Base
 
 	mappedLocations map[string]string
 	root            string
@@ -113,6 +124,14 @@ const (
 	GitDirFormat properties.Property = "gitdir_format"
 	// DisplayCygpath transforms the path to a cygpath format
 	DisplayCygpath properties.Property = "display_cygpath"
+	// DisplayRoot indicates if the linux root slash should be displayed
+	DisplayRoot properties.Property = "display_root"
+	// Fish displays the path in a fish-like style
+	Fish string = "fish"
+	// DirLength the length of the directory name to display in fish style
+	DirLength properties.Property = "dir_length"
+	// FullLengthDirs indicates how many full length directory names should be displayed in fish style
+	FullLengthDirs properties.Property = "full_length_dirs"
 )
 
 func (pt *Path) Template() string {
@@ -121,7 +140,7 @@ func (pt *Path) Template() string {
 
 func (pt *Path) Enabled() bool {
 	pt.setPaths()
-	if len(pt.pwd) == 0 {
+	if pt.pwd == "" {
 		return false
 	}
 
@@ -154,14 +173,17 @@ func (pt *Path) setPaths() {
 
 	pt.cygPath = displayCygpath()
 	pt.windowsPath = pt.env.GOOS() == runtime.WINDOWS && !pt.cygPath
-	pt.pathSeparator = path.Separator()
+
+	if pt.pathSeparator == "" {
+		pt.pathSeparator = path.Separator()
+	}
 
 	pt.pwd = pt.env.Pwd()
-	if (pt.env.Shell() == shell.PWSH || pt.env.Shell() == shell.PWSH5) && len(pt.env.Flags().PSWD) != 0 {
+	if pt.env.Shell() == shell.PWSH && len(pt.env.Flags().PSWD) != 0 {
 		pt.pwd = pt.env.Flags().PSWD
 	}
 
-	if len(pt.pwd) == 0 {
+	if pt.pwd == "" {
 		return
 	}
 
@@ -171,7 +193,7 @@ func (pt *Path) setPaths() {
 }
 
 func (pt *Path) Parent() string {
-	if len(pt.pwd) == 0 {
+	if pt.pwd == "" {
 		return ""
 	}
 
@@ -181,7 +203,8 @@ func (pt *Path) Parent() string {
 		return ""
 	}
 
-	sb := new(strings.Builder)
+	sb := text.NewBuilder()
+
 	folderSeparator := pt.getFolderSeparator()
 
 	sb.WriteString(pt.root)
@@ -197,8 +220,23 @@ func (pt *Path) Parent() string {
 	return sb.String()
 }
 
+func (pt *Path) Format(inputPath string) string {
+	separator := path.Separator()
+
+	elements := strings.Split(inputPath, separator)
+	if len(elements) == 0 {
+		return inputPath
+	}
+
+	if len(elements) == 1 {
+		return pt.colorizePath(elements[0], nil)
+	}
+
+	return pt.colorizePath(elements[0], elements[1:])
+}
+
 func (pt *Path) setStyle() {
-	if len(pt.relative) == 0 {
+	if pt.relative == "" {
 		root := pt.root
 
 		// Only append a separator to a non-filesystem PSDrive root or a Windows drive root.
@@ -212,7 +250,8 @@ func (pt *Path) setStyle() {
 
 	switch style := pt.props.GetString(properties.Style, Agnoster); style {
 	case Agnoster:
-		pt.Path = pt.getAgnosterPath()
+		maxWidth := pt.getMaxWidth()
+		pt.Path = pt.getAgnosterPath(maxWidth)
 	case AgnosterFull:
 		pt.Path = pt.getAgnosterFullPath()
 	case AgnosterShort:
@@ -232,29 +271,31 @@ func (pt *Path) setStyle() {
 	case Powerlevel:
 		maxWidth := pt.getMaxWidth()
 		pt.Path = pt.getUniqueLettersPath(maxWidth)
+	case Fish:
+		pt.Path = pt.getFishPath()
 	default:
 		pt.Path = fmt.Sprintf("Path style: %s is not available", style)
+	}
+
+	// make sure we resolve all templates
+	if txt, err := template.Render(pt.Path, pt); err == nil {
+		pt.Path = txt
 	}
 }
 
 func (pt *Path) getMaxWidth() int {
 	width := pt.props.GetString(MaxWidth, "")
-	if len(width) == 0 {
+	if width == "" {
 		return 0
 	}
 
-	tmpl := &template.Text{
-		Template: width,
-		Context:  pt,
-	}
-
-	text, err := tmpl.Render()
+	txt, err := template.Render(width, pt)
 	if err != nil {
 		log.Error(err)
 		return 0
 	}
 
-	value, err := strconv.Atoi(text)
+	value, err := strconv.Atoi(txt)
 	if err != nil {
 		log.Error(err)
 		return 0
@@ -265,43 +306,33 @@ func (pt *Path) getMaxWidth() int {
 
 func (pt *Path) getFolderSeparator() string {
 	separatorTemplate := pt.props.GetString(FolderSeparatorTemplate, "")
-	if len(separatorTemplate) == 0 {
+	if separatorTemplate == "" {
 		separator := pt.props.GetString(FolderSeparatorIcon, pt.pathSeparator)
 		// if empty, use the default separator
-		if len(separator) == 0 {
+		if separator == "" {
 			return pt.pathSeparator
 		}
 
 		return separator
 	}
 
-	tmpl := &template.Text{
-		Template: separatorTemplate,
-		Context:  pt,
-	}
-
-	text, err := tmpl.Render()
+	txt, err := template.Render(separatorTemplate, pt)
 	if err != nil {
 		log.Error(err)
 	}
 
-	if len(text) == 0 {
+	if txt == "" {
 		return pt.pathSeparator
 	}
 
-	return text
+	return txt
 }
 
 func (pt *Path) getMixedPath() string {
-	root := pt.root
-	folders := pt.Folders
 	threshold := int(pt.props.GetFloat64(MixedThreshold, 4))
 	folderIcon := pt.props.GetString(FolderIcon, "..")
 
-	if pt.isRootFS(root) {
-		root = folders[0].Name
-		folders = folders[1:]
-	}
+	root, folders := pt.getPaths()
 
 	var elements []string
 
@@ -318,15 +349,14 @@ func (pt *Path) getMixedPath() string {
 	return pt.colorizePath(root, elements)
 }
 
-func (pt *Path) getAgnosterPath() string {
-	root := pt.root
-	folders := pt.Folders
+func (pt *Path) getAgnosterPath(maxWidth int) string {
+	if maxWidth > 0 {
+		return pt.getAgnosterMaxWidth(maxWidth)
+	}
+
 	folderIcon := pt.props.GetString(FolderIcon, "..")
 
-	if pt.isRootFS(root) {
-		root = folders[0].Name
-		folders = folders[1:]
-	}
+	root, folders := pt.getPaths()
 
 	var elements []string
 
@@ -343,16 +373,15 @@ func (pt *Path) getAgnosterPath() string {
 }
 
 func (pt *Path) getAgnosterLeftPath() string {
-	root := pt.root
-	folders := pt.Folders
 	folderIcon := pt.props.GetString(FolderIcon, "..")
 
-	if pt.isRootFS(root) {
-		root = folders[0].Name
-		folders = folders[1:]
-	}
+	root, folders := pt.getPaths()
 
 	var elements []string
+	if len(folders) == 0 {
+		return pt.colorizePath(root, elements)
+	}
+
 	elements = append(elements, folders[0].Name)
 	for i, n := 1, len(folders); i < n; i++ {
 		if folders[i].Display {
@@ -366,31 +395,32 @@ func (pt *Path) getAgnosterLeftPath() string {
 	return pt.colorizePath(root, elements)
 }
 
+func (pt *Path) findFirstLetterOrNumber(txt string) (letter string, index int) {
+	for i, char := range txt {
+		if unicode.IsLetter(char) || unicode.IsNumber(char) {
+			return string(char), i
+		}
+	}
+
+	return txt, 0
+}
+
 func (pt *Path) getRelevantLetter(folder *Folder) string {
 	if folder.Display {
 		return folder.Name
 	}
 
-	// check if there is at least a letter we can use
-	matches := regex.FindNamedRegexMatch(`(?P<letter>[\p{L}0-9]).*`, folder.Name)
-	if matches == nil || len(matches["letter"]) == 0 {
-		// no letter found, keep the folder unchanged
-		return folder.Name
+	letter, index := pt.findFirstLetterOrNumber(folder.Name)
+	if index == 0 {
+		return letter
 	}
-	letter := matches["letter"]
+
 	// handle non-letter characters before the first found letter
-	letter = folder.Name[0:strings.Index(folder.Name, letter)] + letter
-	return letter
+	return folder.Name[0:index] + letter
 }
 
 func (pt *Path) getLetterPath() string {
-	root := pt.root
-	folders := pt.Folders
-
-	if pt.isRootFS(root) {
-		root = folders[0].Name
-		folders = folders[1:]
-	}
+	root, folders := pt.getPaths()
 
 	root = pt.getRelevantLetter(&Folder{Name: root})
 
@@ -408,15 +438,43 @@ func (pt *Path) getLetterPath() string {
 	return pt.colorizePath(root, elements)
 }
 
+func (pt *Path) getFishPath() string {
+	root, folders := pt.getPaths()
+	folders = append(Folders{&Folder{Name: root, Display: false}}, folders...)
+
+	dirLength := pt.props.GetInt(DirLength, 1)
+	fullLengthDirs := max(pt.props.GetInt(FullLengthDirs, 1), 1)
+
+	folderCount := len(folders)
+	stopAt := folderCount - fullLengthDirs
+
+	var elements []string
+	for i := range folderCount {
+		name := folders[i].Name
+		runeCount := utf8.RuneCountInString(name)
+		if folders[i].Display || dirLength <= 0 || runeCount < dirLength || i >= stopAt {
+			elements = append(elements, name)
+			continue
+		}
+
+		// Convert string to rune slice to properly handle multi-byte characters
+		runes := []rune(name)
+		elements = append(elements, string(runes[:dirLength]))
+	}
+
+	if len(elements) == 1 {
+		return pt.colorizePath(elements[0], nil)
+	}
+
+	return pt.colorizePath(elements[0], elements[1:])
+}
+
 func (pt *Path) getUniqueLettersPath(maxWidth int) string {
-	root := pt.root
-	folders := pt.Folders
+	dr := pt.props.GetBool(DisplayRoot, false)
+	log.Debugf("%t", dr)
 	separator := pt.getFolderSeparator()
 
-	if pt.isRootFS(root) {
-		root = folders[0].Name
-		folders = folders[1:]
-	}
+	root, folders := pt.getPaths()
 
 	folderNames := folders.List()
 
@@ -476,31 +534,53 @@ func (pt *Path) getUniqueLettersPath(maxWidth int) string {
 	return pt.colorizePath(root, elements)
 }
 
-func (pt *Path) getAgnosterFullPath() string {
-	root := pt.root
-	folders := pt.Folders
+func (pt *Path) getAgnosterMaxWidth(maxWidth int) string {
+	separator := pt.getFolderSeparator()
+	folderIcon := pt.props.GetString(FolderIcon, "..")
 
-	if pt.isRootFS(root) {
-		root = folders[0].Name
-		folders = folders[1:]
+	root, folders := pt.getPaths()
+	folderNames := append([]string{root}, folders.List()...)
+
+	// this assumes that the root is never a single character
+	// except when it really is / on unix systems
+	if len(root) == 1 {
+		maxWidth++ // add one for the separator
 	}
+
+	if len(folderNames) == 0 {
+		return pt.colorizePath(root, nil)
+	}
+
+	fullPath := strings.Join(folderNames, separator)
+
+	for i := 0; i < len(folderNames)-1 && utf8.RuneCountInString(fullPath) > maxWidth; i++ {
+		folderNames[i] = folderIcon
+		fullPath = strings.Join(folderNames, separator)
+	}
+
+	for len(folderNames) > 1 && utf8.RuneCountInString(fullPath) > maxWidth {
+		// remove every folder until the path is short enough
+		folderNames = folderNames[1:]
+		fullPath = strings.Join(folderNames, separator)
+	}
+
+	if len(folderNames) == 1 {
+		return pt.colorizePath(template.TruncE(maxWidth, folderNames[0]), nil)
+	}
+
+	return pt.colorizePath(folderNames[0], folderNames[1:])
+}
+
+func (pt *Path) getAgnosterFullPath() string {
+	root, folders := pt.getPaths()
 
 	return pt.colorizePath(root, folders.List())
 }
 
 func (pt *Path) getAgnosterShortPath() string {
-	root := pt.root
-	folders := pt.Folders
+	root, folders := pt.getPaths()
 
-	if pt.isRootFS(root) {
-		root = folders[0].Name
-		folders = folders[1:]
-	}
-
-	maxDepth := pt.props.GetInt(MaxDepth, 1)
-	if maxDepth < 1 {
-		maxDepth = 1
-	}
+	maxDepth := max(pt.props.GetInt(MaxDepth, 1), 1)
 
 	pathDepth := len(folders)
 	hideRootLocation := pt.props.GetBool(HideRootLocation, false)
@@ -535,7 +615,7 @@ func (pt *Path) getFolderPath() string {
 
 func (pt *Path) join(root, relative string) string {
 	// this is a full replacement of the parent
-	if len(root) == 0 {
+	if root == "" {
 		return relative
 	}
 
@@ -564,30 +644,29 @@ func (pt *Path) setMappedLocations() {
 	// mapped locations can override predefined locations
 	keyValues := pt.props.GetKeyValueMap(MappedLocations, make(map[string]string))
 	for key, value := range keyValues {
-		if len(key) == 0 {
+		if key == "" {
 			continue
 		}
 
-		tmpl := &template.Text{
-			Template: key,
-			Context:  pt,
-		}
-
-		location, err := tmpl.Render()
+		location, err := template.Render(key, pt)
 		if err != nil {
 			log.Error(err)
 		}
 
-		if len(location) == 0 {
+		if location == "" {
 			continue
+		}
+
+		if !strings.HasPrefix(location, regexPrefix) {
+			location = pt.normalize(location)
 		}
 
 		// When two templates resolve to the same key, the values are compared in ascending order and the latter is taken.
-		if v, exist := mappedLocations[pt.normalize(location)]; exist && value <= v {
+		if v, exist := mappedLocations[location]; exist && value <= v {
 			continue
 		}
 
-		mappedLocations[pt.normalize(location)] = value
+		mappedLocations[location] = value
 	}
 
 	pt.mappedLocations = mappedLocations
@@ -595,7 +674,7 @@ func (pt *Path) setMappedLocations() {
 
 func (pt *Path) replaceMappedLocations(inputPath string) (string, string) {
 	root, relative := pt.parsePath(inputPath)
-	if len(relative) == 0 {
+	if relative == "" {
 		pt.RootDir = true
 	}
 
@@ -621,8 +700,38 @@ func (pt *Path) replaceMappedLocations(inputPath string) (string, string) {
 		return strings.NewReplacer("<", "<<>", ">", "<>>").Replace(path)
 	}
 
+	handleRegex := func(key string) (string, bool) {
+		if !strings.HasPrefix(key, regexPrefix) {
+			return "", false
+		}
+
+		input := strings.ReplaceAll(inputPath, `\`, `/`)
+		pattern := key[len(regexPrefix):]
+
+		// Add (?i) at the start of the pattern for case-insensitive matching on Windows
+		if pt.windowsPath || (pt.env.IsWsl() && strings.HasPrefix(input, "/mnt/")) {
+			pattern = "(?i)" + pattern
+		}
+
+		match, OK := regex.FindStringMatch(pattern, input, 1)
+		if !OK {
+			return "", false
+		}
+
+		// Replace the first match with the mapped location.
+		input = strings.Replace(input, match, pt.mappedLocations[key], 1)
+		input = path.Clean(input)
+
+		return input, true
+	}
+
 	for _, key := range keys {
+		if input, OK := handleRegex(key); OK {
+			return pt.parsePath(input)
+		}
+
 		keyRoot, keyRelative := pt.parsePath(key)
+
 		matchSubFolders := strings.HasSuffix(keyRelative, pt.pathSeparator+"*")
 
 		if matchSubFolders {
@@ -638,12 +747,12 @@ func (pt *Path) replaceMappedLocations(inputPath string) (string, string) {
 		overflow := relative[len(keyRelative):]
 
 		// exactly match the full path
-		if len(overflow) == 0 {
+		if overflow == "" {
 			return value, ""
 		}
 
 		// only match the root
-		if len(keyRelative) == 0 {
+		if keyRelative == "" {
 			return value, strings.Trim(escape(relative), pt.pathSeparator)
 		}
 
@@ -660,7 +769,7 @@ func (pt *Path) replaceMappedLocations(inputPath string) (string, string) {
 func (pt *Path) parsePath(inputPath string) (string, string) {
 	var root, relative string
 
-	if len(inputPath) == 0 {
+	if inputPath == "" {
 		return root, relative
 	}
 
@@ -702,12 +811,29 @@ func (pt *Path) parsePath(inputPath string) (string, string) {
 	return root, relative
 }
 
-func (pt *Path) isRootFS(inputPath string) bool {
-	return len(inputPath) == 1 && path.IsSeparator(inputPath[0])
+func (pt *Path) getPaths() (string, Folders) {
+	root := pt.root
+	folders := pt.Folders
+
+	isRootFS := func(inputPath string) bool {
+		displayRoot := pt.props.GetBool(DisplayRoot, false)
+		if displayRoot {
+			return false
+		}
+
+		return len(inputPath) == 1 && path.IsSeparator(inputPath[0])
+	}
+
+	if isRootFS(root) && len(folders) > 0 {
+		root = folders[0].Name
+		folders = folders[1:]
+	}
+
+	return root, folders
 }
 
 func (pt *Path) endWithSeparator(inputPath string) bool {
-	if len(inputPath) == 0 {
+	if inputPath == "" {
 		return false
 	}
 
@@ -727,6 +853,10 @@ func (pt *Path) normalize(inputPath string) string {
 		normalized = strings.ToLower(normalized)
 	}
 
+	if pt.cygPath {
+		return strings.ReplaceAll(normalized, `\`, "/")
+	}
+
 	return normalized
 }
 
@@ -742,12 +872,14 @@ func (pt *Path) colorizePath(root string, elements []string) string {
 	rightFormat := pt.props.GetString(RightFormat, edgeFormat)
 
 	colorizeElement := func(element string) string {
-		if skipColorize || len(element) == 0 {
+		if skipColorize || element == "" {
 			return element
 		}
+
 		defer func() {
 			cycle = append(cycle[1:], cycle[0])
 		}()
+
 		return fmt.Sprintf("<%s>%s</>", cycle[0], element)
 	}
 
@@ -763,7 +895,15 @@ func (pt *Path) colorizePath(root string, elements []string) string {
 		return fmt.Sprintf("<%s>%s</>", cycle[0], folderSeparator)
 	}
 
-	sb := new(strings.Builder)
+	// Pre-calculate total capacity needed
+	totalLen := len(root)
+	for _, el := range elements {
+		totalLen += len(el) + 20 // estimate for color codes
+	}
+
+	sb := text.NewBuilder()
+
+	sb.Grow(totalLen)
 
 	formattedRoot := fmt.Sprintf(leftFormat, root)
 	sb.WriteString(colorizeElement(formattedRoot))
@@ -773,7 +913,7 @@ func (pt *Path) colorizePath(root string, elements []string) string {
 	}
 
 	for i, element := range elements {
-		if len(element) == 0 {
+		if element == "" {
 			continue
 		}
 
@@ -795,11 +935,11 @@ func (pt *Path) colorizePath(root string, elements []string) string {
 func (pt *Path) splitPath() Folders {
 	folders := Folders{}
 
-	if len(pt.relative) == 0 {
+	if pt.relative == "" {
 		return folders
 	}
 
-	elements := strings.Split(pt.relative, pt.pathSeparator)
+	elements := strings.SplitSeq(pt.relative, pt.pathSeparator)
 	folderFormatMap := pt.makeFolderFormatMap()
 	currentPath := pt.root
 
@@ -809,7 +949,7 @@ func (pt *Path) splitPath() Folders {
 
 	var display bool
 
-	for _, element := range elements {
+	for element := range elements {
 		currentPath += element
 
 		if format := folderFormatMap[currentPath]; len(format) != 0 {

@@ -1,7 +1,7 @@
 package segments
 
 type Vala struct {
-	language
+	Language
 }
 
 func (v *Vala) Template() string {
@@ -19,5 +19,5 @@ func (v *Vala) Enabled() bool {
 	}
 	v.versionURLTemplate = "https://gitlab.gnome.org/GNOME/vala/raw/{{ .Major }}.{{ .Minor }}/NEWS"
 
-	return v.language.Enabled()
+	return v.Language.Enabled()
 }

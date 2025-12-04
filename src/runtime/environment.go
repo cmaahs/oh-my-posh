@@ -4,11 +4,10 @@ import (
 	"io"
 	"io/fs"
 
-	"github.com/jandedobbeleer/oh-my-posh/src/cache"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/battery"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/http"
 
-	disk "github.com/shirou/gopsutil/v3/disk"
+	disk "github.com/shirou/gopsutil/v4/disk"
 )
 
 const (
@@ -16,7 +15,9 @@ const (
 	WINDOWS = "windows"
 	DARWIN  = "darwin"
 	LINUX   = "linux"
+	FREEBSD = "freebsd"
 	CMD     = "cmd"
+	ANDROID = "android"
 
 	PRIMARY = "primary"
 )
@@ -57,9 +58,6 @@ type Environment interface {
 	IsCygwin() bool
 	StackCount() int
 	TerminalWidth() (int, error)
-	Cache() cache.Cache
-	Session() cache.Cache
-	Close()
 	Logs() string
 	InWSLSharedDrive() bool
 	ConvertToLinuxPath(input string) string
@@ -70,32 +68,34 @@ type Environment interface {
 }
 
 type Flags struct {
-	PSWD          string
+	Type          string
 	PipeStatus    string
-	Config        string
+	ConfigPath    string
+	PSWD          string
 	Shell         string
 	ShellVersion  string
 	PWD           string
 	AbsolutePWD   string
-	Type          string
 	ErrorCode     int
 	PromptCount   int
-	StackCount    int
 	Column        int
 	TerminalWidth int
 	ExecutionTime float64
+	StackCount    int
+	ConfigHash    uint64
 	JobCount      int
-	IsPrimary     bool
 	HasExtra      bool
-	Debug         bool
-	Plain         bool
 	Strict        bool
+	Debug         bool
 	Cleared       bool
 	NoExitCode    bool
-	SaveCache     bool
 	Init          bool
 	Migrate       bool
 	Eval          bool
+	Escape        bool
+	IsPrimary     bool
+	Plain         bool
+	Force         bool
 }
 
 type CommandError struct {

@@ -1,8 +1,10 @@
 package prompt
 
 import (
+	"slices"
 	"strings"
 
+	"github.com/jandedobbeleer/oh-my-posh/src/cache"
 	"github.com/jandedobbeleer/oh-my-posh/src/config"
 	"github.com/jandedobbeleer/oh-my-posh/src/shell"
 	"github.com/jandedobbeleer/oh-my-posh/src/terminal"
@@ -13,7 +15,7 @@ func (e *Engine) Tooltip(tip string) string {
 	tooltips := make([]*config.Segment, 0, 1)
 
 	for _, tooltip := range e.Config.Tooltips {
-		if !e.shouldInvokeWithTip(tooltip, tip) {
+		if !slices.Contains(tooltip.Tips, tip) {
 			continue
 		}
 
@@ -43,8 +45,10 @@ func (e *Engine) Tooltip(tip string) string {
 		return ""
 	}
 
+	text, length = e.handleToolTipAction(text, length)
+
 	switch e.Env.Shell() {
-	case shell.PWSH, shell.PWSH5:
+	case shell.PWSH:
 		e.rprompt = text
 		e.currentLineLength = e.Env.Flags().Column
 
@@ -63,12 +67,29 @@ func (e *Engine) Tooltip(tip string) string {
 	}
 }
 
-func (e *Engine) shouldInvokeWithTip(segment *config.Segment, tip string) bool {
-	for _, t := range segment.Tips {
-		if t == tip {
-			return true
-		}
+func (e *Engine) handleToolTipAction(text string, length int) (string, int) {
+	if e.Config.ToolTipsAction.IsDefault() {
+		return text, length
 	}
 
-	return false
+	rprompt, OK := cache.Get[string](cache.Session, RPromptKey)
+	if !OK {
+		return text, length
+	}
+
+	rpromptLength, OK := cache.Get[int](cache.Session, RPromptLengthKey)
+	if !OK {
+		return text, length
+	}
+
+	length += rpromptLength
+
+	switch e.Config.ToolTipsAction {
+	case config.Extend:
+		text = rprompt + text
+	case config.Prepend:
+		text += rprompt
+	}
+
+	return text, length
 }

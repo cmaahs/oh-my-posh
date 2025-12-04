@@ -9,7 +9,7 @@ import (
 //go:embed scripts/omp.fish
 var fishInit string
 
-func (f Feature) Fish() Code {
+func (f Features) Fish() Code {
 	switch f {
 	case Transient:
 		return "set --global _omp_transient_prompt 1"
@@ -23,7 +23,7 @@ func (f Feature) Fish() Code {
 		return unixUpgrade
 	case Notice:
 		return unixNotice
-	case RPrompt, PoshGit, Azure, LineError, Jobs, CursorPositioning:
+	case RPrompt, PoshGit, Azure, LineError, Jobs, CursorPositioning, Async:
 		fallthrough
 	default:
 		return ""
@@ -31,7 +31,7 @@ func (f Feature) Fish() Code {
 }
 
 func quoteFishStr(str string) string {
-	if len(str) == 0 {
+	if str == "" {
 		return "''"
 	}
 

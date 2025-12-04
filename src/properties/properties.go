@@ -1,11 +1,29 @@
 package properties
 
 import (
+	"encoding/gob"
 	"fmt"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/color"
 	"github.com/jandedobbeleer/oh-my-posh/src/log"
 )
+
+func init() {
+	gob.Register([]any{})
+	gob.Register(map[string]any{})
+	gob.Register(map[any]any{})
+	gob.Register([]string{})
+	gob.Register(map[string]string{})
+	gob.Register([]int{})
+	gob.Register([]float64{})
+	gob.Register([]bool{})
+	gob.Register(int64(0))
+	gob.Register(uint64(0))
+	gob.Register(float32(0))
+	gob.Register(Map{})
+	gob.Register((*Property)(nil))
+	gob.Register(map[Property]any{})
+}
 
 type Wrapper struct {
 	Properties Map
@@ -25,7 +43,7 @@ func (w *Wrapper) GetBool(property Property, defaultValue bool) bool {
 
 func (w *Wrapper) GetString(property Property, defaultValue string) string {
 	value := w.Properties.GetString(property, defaultValue)
-	log.Debug(value)
+	log.Debug(fmt.Sprintf("%s: %s", property, value))
 	return value
 }
 

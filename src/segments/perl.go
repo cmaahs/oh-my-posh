@@ -1,7 +1,7 @@
 package segments
 
 type Perl struct {
-	language
+	Language
 }
 
 func (p *Perl) Template() string {
@@ -24,5 +24,5 @@ func (p *Perl) Enabled() bool {
 		},
 	}
 
-	return p.language.Enabled()
+	return p.Language.Enabled()
 }

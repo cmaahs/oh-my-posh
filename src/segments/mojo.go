@@ -8,7 +8,7 @@ import (
 
 type Mojo struct {
 	Venv string
-	language
+	Language
 }
 
 func (m *Mojo) Template() string {
@@ -25,19 +25,20 @@ func (m *Mojo) Enabled() bool {
 		},
 	}
 	m.displayMode = m.props.GetString(DisplayMode, DisplayModeEnvironment)
-	m.language.loadContext = m.loadContext
-	m.language.inContext = m.inContext
+	m.Language.loadContext = m.loadContext
+	m.Language.inContext = m.inContext
 
-	return m.language.Enabled()
+	return m.Language.Enabled()
 }
 
 func (m *Mojo) loadContext() {
-	if !m.language.props.GetBool(FetchVirtualEnv, true) {
+	if !m.props.GetBool(FetchVirtualEnv, true) {
 		return
 	}
+
 	// Magic, the official package manager and virtual env manager,
 	// is built on top of pixi: https://github.com/prefix-dev/pixi
-	venv := m.language.env.Getenv("PIXI_ENVIRONMENT_NAME")
+	venv := m.env.Getenv("PIXI_ENVIRONMENT_NAME")
 	if len(venv) > 0 && m.canUseVenvName(venv) {
 		m.Venv = venv
 	}
@@ -49,9 +50,11 @@ func (m *Mojo) inContext() bool {
 
 func (m *Mojo) canUseVenvName(name string) bool {
 	defaultNames := []string{"default"}
-	if m.language.props.GetBool(properties.DisplayDefault, true) ||
+
+	if m.props.GetBool(properties.DisplayDefault, true) ||
 		!slices.Contains(defaultNames, name) {
 		return true
 	}
+
 	return false
 }

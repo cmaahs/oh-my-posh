@@ -14,6 +14,7 @@ func TestRenderTemplate(t *testing.T) {
 	type Me struct {
 		Name string
 	}
+
 	cases := []struct {
 		Context     any
 		Case        string
@@ -156,12 +157,12 @@ func TestRenderTemplate(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tmpl := &Text{
-			Template: tc.Template,
-			Context:  tc.Context,
-		}
+		env := new(mock.Environment)
+		env.On("Shell").Return("foo")
+		Cache = new(cache.Template)
+		Init(env, nil, nil)
 
-		text, err := tmpl.Render()
+		text, err := Render(tc.Template, tc.Context)
 		if tc.ShouldError {
 			assert.Error(t, err)
 			continue
@@ -204,7 +205,7 @@ func TestRenderTemplateEnvVar(t *testing.T) {
 		},
 		{Case: "no env var", Expected: "hello world", Template: "{{.Text}} world", Context: struct{ Text string }{Text: "hello"}},
 		{Case: "map", Expected: "hello world", Template: "{{.Text}} world", Context: map[string]any{"Text": "hello"}},
-		{Case: "empty map", Expected: " world", Template: "{{.Text}} world", Context: map[string]string{}},
+		{Case: "empty map", Expected: " world", Template: "{{.Text}} world", Context: map[string]string{}, ShouldError: true},
 		{
 			Case:     "Struct with duplicate property",
 			Expected: "posh",
@@ -243,16 +244,13 @@ func TestRenderTemplateEnvVar(t *testing.T) {
 		}
 
 		Cache = &cache.Template{
-			OS: "darwin",
+			SimpleTemplate: cache.SimpleTemplate{
+				OS: "darwin",
+			},
 		}
-		Init(env, nil)
+		Init(env, nil, nil)
 
-		tmpl := &Text{
-			Template: tc.Template,
-			Context:  tc.Context,
-		}
-
-		text, err := tmpl.Render()
+		text, err := Render(tc.Template, tc.Context)
 		if tc.ShouldError {
 			assert.Error(t, err)
 			continue
@@ -330,25 +328,55 @@ func TestPatchTemplate(t *testing.T) {
 		},
 		{
 			Case:     "Replace a direct call to .Segments with .Segments.List",
-			Expected: `{{.Segments.ToSimple.Git.Repo}}`,
+			Expected: `{{(.Segments.MustGet "Git").Repo}}`,
 			Template: `{{.Segments.Git.Repo}}`,
 		},
 	}
 
-	env := &mock.Environment{}
+	env := new(mock.Environment)
 	env.On("Shell").Return("foo")
-
-	Init(env, nil)
+	Cache = new(cache.Template)
+	Init(env, nil, nil)
 
 	for _, tc := range cases {
-		tmpl := &Text{
-			Template: tc.Template,
-			Context:  map[string]any{"OS": "posh"},
+		context := map[string]any{
+			"OS":         true,
+			"World":      true,
+			"WorldTrend": "chaos",
+			"Working":    true,
+			"Staging":    true,
+			"CPU":        true,
+		}
+
+		tmpl := Text{
+			template: tc.Template,
+			context:  context,
 		}
 
 		tmpl.patchTemplate()
-		assert.Equal(t, tc.Expected, tmpl.Template, tc.Case)
+		assert.Equal(t, tc.Expected, tmpl.template, tc.Case)
 	}
+}
+
+type Foo struct{}
+
+func (f *Foo) Hello() string {
+	return "hello"
+}
+
+func TestPatchTemplateStruct(t *testing.T) {
+	env := new(mock.Environment)
+	env.On("Shell").Return("foo")
+	Cache = new(cache.Template)
+	Init(env, nil, nil)
+
+	tmpl := Text{
+		template: "{{ .Hello }}",
+		context:  Foo{},
+	}
+
+	tmpl.patchTemplate()
+	assert.Equal(t, "{{ .Data.Hello }}", tmpl.template)
 }
 
 func TestSegmentContains(t *testing.T) {
@@ -362,22 +390,17 @@ func TestSegmentContains(t *testing.T) {
 	}
 
 	env := &mock.Environment{}
-	segments := maps.NewConcurrent()
+	segments := maps.NewConcurrent[any]()
 	segments.Set("Git", "foo")
 	env.On("Shell").Return("foo")
 
 	Cache = &cache.Template{
 		Segments: segments,
 	}
-	Init(env, nil)
+	Init(env, nil, nil)
 
 	for _, tc := range cases {
-		tmpl := &Text{
-			Template: tc.Template,
-			Context:  nil,
-		}
-
-		text, _ := tmpl.Render()
+		text, _ := Render(tc.Template, nil)
 		assert.Equal(t, tc.Expected, text, tc.Case)
 	}
 }

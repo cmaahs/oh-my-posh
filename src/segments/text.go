@@ -1,7 +1,7 @@
 package segments
 
 type Text struct {
-	base
+	Base
 }
 
 func (t *Text) Template() string {

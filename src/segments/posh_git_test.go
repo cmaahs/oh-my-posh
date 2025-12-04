@@ -1,6 +1,8 @@
 package segments
 
 import (
+	"errors"
+	"sync"
 	"testing"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
@@ -187,20 +189,25 @@ func TestPoshGitSegment(t *testing.T) {
 		env.On("Home").Return("/Users/bill")
 		env.On("GOOS").Return(runtime.LINUX)
 		env.On("RunCommand", "git", []string{"-C", "", "--no-optional-locks", "-c", "core.quotepath=false",
-			"-c", "color.status=false", "remote", "get-url", "origin"}).Return("github.com/cli", nil)
+			"-c", "color.status=false", "remote", "get-url", origin}).Return("github.com/cli", nil)
 
 		props := &properties.Map{
 			FetchUpstreamIcon: tc.FetchUpstreamIcon,
 		}
 
 		g := &Git{
-			scm: scm{
+			Scm: Scm{
 				command: GITCOMMAND,
 			},
 		}
 		g.Init(props, env)
 
-		if len(tc.Template) == 0 {
+		g.configOnce = sync.Once{}
+		g.configOnce.Do(func() {
+			g.configErr = errors.New("no config")
+		})
+
+		if tc.Template == "" {
 			tc.Template = g.Template()
 		}
 

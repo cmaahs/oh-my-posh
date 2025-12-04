@@ -2,10 +2,11 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/jandedobbeleer/oh-my-posh/src/cache"
 	"github.com/jandedobbeleer/oh-my-posh/src/config"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime"
-	"github.com/jandedobbeleer/oh-my-posh/src/shell"
 
 	"github.com/spf13/cobra"
 )
@@ -40,17 +41,24 @@ Migrates the ~/myconfig.omp.json config file to TOML and writes the result to yo
 A backup of the current config can be found at ~/myconfig.omp.json.bak.`,
 	Args: cobra.NoArgs,
 	Run: func(_ *cobra.Command, _ []string) {
-		configFile := config.Path(configFlag)
-		cfg := config.Load(configFile, shell.GENERIC, true)
+		cache.Init(os.Getenv("POSH_SHELL"))
+
+		err := setConfigFlag()
+		if err != nil {
+			exitcode = 666
+			fmt.Println(err.Error())
+			return
+		}
+
+		cfg := config.Load(configFlag, true)
 
 		flags := &runtime.Flags{
-			Config:  configFile,
-			Migrate: true,
+			ConfigPath: cfg.Source,
+			Migrate:    true,
 		}
 
 		env := &runtime.Terminal{}
 		env.Init(flags)
-		defer env.Close()
 
 		if write {
 			cfg.BackupAndMigrate()

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"path/filepath"
+	"slices"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 
@@ -11,8 +12,12 @@ import (
 	"github.com/hashicorp/hcl/v2/hclparse"
 )
 
+const (
+	Command properties.Property = "command"
+)
+
 type Terraform struct {
-	base
+	Base
 
 	TerraformBlock
 	WorkspaceName string
@@ -31,7 +36,7 @@ type TerraformBlock struct {
 }
 
 func (tf *Terraform) Enabled() bool {
-	cmd := "terraform"
+	cmd := tf.props.GetString(Command, "terraform")
 	fetchVersion := tf.props.GetBool(properties.FetchVersion, false)
 
 	if !tf.env.HasCommand(cmd) || !tf.inContext(fetchVersion) {
@@ -59,10 +64,8 @@ func (tf *Terraform) inContext(fetchVersion bool) bool {
 	}
 
 	files := []string{".tf", ".tfplan", ".tfstate"}
-	for _, file := range files {
-		if tf.env.HasFiles(file) {
-			return true
-		}
+	if slices.ContainsFunc(files, tf.env.HasFiles) {
+		return true
 	}
 
 	if !fetchVersion {
@@ -70,13 +73,7 @@ func (tf *Terraform) inContext(fetchVersion bool) bool {
 	}
 
 	versionFiles := []string{"versions.tf", "main.tf", "terraform.tfstate"}
-	for _, file := range versionFiles {
-		if tf.env.HasFiles(file) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(versionFiles, tf.env.HasFiles)
 }
 
 func (tf *Terraform) setVersionFromTfFiles() error {
@@ -95,7 +92,7 @@ func (tf *Terraform) setVersionFromTfFiles() error {
 
 		var config TerraFormConfig
 		diags = gohcl.DecodeBody(hclFile.Body, nil, &config)
-		if diags != nil {
+		if diags != nil || config.Terraform == nil {
 			continue
 		}
 

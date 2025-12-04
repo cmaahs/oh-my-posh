@@ -9,7 +9,6 @@ import (
 
 	git "github.com/go-git/go-git/v5"
 	"github.com/integralist/go-findroot/find"
-	"github.com/jandedobbeleer/oh-my-posh/src/cache"
 	"github.com/jandedobbeleer/oh-my-posh/src/log"
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	gl "github.com/maahsome/gitlab-go"
@@ -17,7 +16,7 @@ import (
 )
 
 type GitlabMR struct {
-	base
+	Base
 
 	Count       string
 	AuthorCount string
@@ -56,9 +55,9 @@ const (
 	RootOnly properties.Property = "root_only"
 
 	// GitlabMRCacheKeyResponse key used when caching the response
-	GitlabMRCacheKeyResponse string = "gitlabmr_response"
+	// GitlabMRCacheKeyResponse string = "gitlabmr_response"
 	// GitlabMRCacheKeyURL key used when caching the url responsible for the response
-	GitlabMRCacheKeyProjectID string = "gitlabmr_project_id"
+	// GitlabMRCacheKeyProjectID string = "gitlabmr_project_id"
 	// ErrorMsg display when an MR count cannot be obtained
 	ErrorMsg string = "ERR"
 )
@@ -99,29 +98,29 @@ func (mr *GitlabMR) Enabled() bool {
 
 	if inProject {
 
-		cacheResponse := ""
-		responseCached := false
+		// cacheResponse := ""
+		// responseCached := false
 
-		cacheTimeout := mr.props.GetString(properties.CacheDuration, "5m0s")
-		cacheID, idCached := mr.env.Cache().Get(fmt.Sprintf("%s_%s", GitlabMRCacheKeyProjectID, gitRoot.Path))
-		if idCached {
-			cacheResponse, responseCached = mr.env.Cache().Get(fmt.Sprintf("%s_%s", GitlabMRCacheKeyResponse, cacheID))
-		}
+		// cacheTimeout := mr.props.GetString(properties.CacheDuration, "5m0s")
+		// cacheID, idCached := mr.env.Cache().Get(fmt.Sprintf("%s_%s", GitlabMRCacheKeyProjectID, gitRoot.Path))
+		// if idCached {
+		// 	cacheResponse, responseCached = mr.env.Cache().Get(fmt.Sprintf("%s_%s", GitlabMRCacheKeyResponse, cacheID))
+		// }
 
-		response := new(mergeRequestList)
-		if responseCached {
-			err := json.Unmarshal([]byte(cacheResponse), response)
-			if err != nil {
-				mr.Count = ErrorMsg
-				mr.AuthorCount = ErrorMsg
-				return true
-			}
-			authorUsername := mr.props.GetString(AuthorUsername, "")
-			authorOnly := mr.props.GetBool(AuthorOnly, false)
-			mr.buildCount(response, authorOnly, authorUsername)
-			mr.FromCache = "*"
-			return true
-		}
+		// response := new(mergeRequestList)
+		// if responseCached {
+		// 	err := json.Unmarshal([]byte(cacheResponse), response)
+		// 	if err != nil {
+		// 		mr.Count = ErrorMsg
+		// 		mr.AuthorCount = ErrorMsg
+		// 		return true
+		// 	}
+		// 	authorUsername := mr.props.GetString(AuthorUsername, "")
+		// 	authorOnly := mr.props.GetBool(AuthorOnly, false)
+		// 	mr.buildCount(response, authorOnly, authorUsername)
+		// 	mr.FromCache = "*"
+		// 	return true
+		// }
 
 		// Not Cached, so back to the source
 		// get project id
@@ -132,7 +131,7 @@ func (mr *GitlabMR) Enabled() bool {
 		}
 		mr.ProjectID = fmt.Sprintf("%d", projectID)
 		authorOnly := mr.props.GetBool(AuthorOnly, false)
-		mr.doFetchGitlabMR(authorOnly, projectID, cacheTimeout)
+		mr.doFetchGitlabMR(authorOnly, projectID)
 		mr.FromCache = ""
 	}
 	return inProject
@@ -200,7 +199,7 @@ func (mr *GitlabMR) doFetchGitlabProjectID(gitRoot find.Stat) int {
 
 }
 
-func (mr *GitlabMR) doFetchGitlabMR(authorOnly bool, id int, cacheTimeout string) {
+func (mr *GitlabMR) doFetchGitlabMR(authorOnly bool, id int) {
 	var gitClient gl.GitlabClient
 
 	glHost := mr.props.GetString(GitlabHost, "gitlab.com")
@@ -237,16 +236,16 @@ func (mr *GitlabMR) doFetchGitlabMR(authorOnly bool, id int, cacheTimeout string
 		mr.AuthorCount = ErrorMsg
 		return
 	}
-	if cacheTimeout != "" {
-		path, err := os.Getwd()
-		if err != nil {
-			mr.Count = ErrorMsg
-			mr.AuthorCount = ErrorMsg
-			return
-		}
-		mr.env.Cache().Set(fmt.Sprintf("%s_%d", GitlabMRCacheKeyResponse, id), gitdata, cache.Duration(cacheTimeout))
-		mr.env.Cache().Set(fmt.Sprintf("%s_%s", GitlabMRCacheKeyProjectID, path), fmt.Sprintf("%d", id), cache.Duration(cacheTimeout))
-	}
+	// if cacheTimeout != "" {
+	// 	path, err := os.Getwd()
+	// 	if err != nil {
+	// 		mr.Count = ErrorMsg
+	// 		mr.AuthorCount = ErrorMsg
+	// 		return
+	// 	}
+	// 	mr.env.Cache().Set(fmt.Sprintf("%s_%d", GitlabMRCacheKeyResponse, id), gitdata, cache.Duration(cacheTimeout))
+	// 	mr.env.Cache().Set(fmt.Sprintf("%s_%s", GitlabMRCacheKeyProjectID, path), fmt.Sprintf("%d", id), cache.Duration(cacheTimeout))
+	// }
 
 	mr.buildCount(&mrList, authorOnly, authorUsername)
 }

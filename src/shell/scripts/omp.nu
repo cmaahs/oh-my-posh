@@ -4,11 +4,14 @@ if ($env.config? | is-not-empty) {
 }
 
 $env.POWERLINE_COMMAND = 'oh-my-posh'
-$env.POSH_THEME = (echo ::CONFIG::)
 $env.PROMPT_INDICATOR = ""
-$env.POSH_SESSION_ID = (echo ::SESSION_ID::)
+$env.POSH_SESSION_ID = "::SESSION_ID::"
 $env.POSH_SHELL = "nu"
 $env.POSH_SHELL_VERSION = (version | get version)
+
+# disable all known python virtual environment prompts
+$env.VIRTUAL_ENV_DISABLE_PROMPT = 1
+$env.PYENV_VIRTUALENV_DISABLE_PROMPT = 1
 
 let _omp_executable: string = (echo ::OMP::)
 
@@ -36,6 +39,7 @@ def --wrapped _omp_get_prompt [
             $"--no-status=($no_status)"
             $"--execution-time=($execution_time)"
             $"--terminal-width=((term size).columns)"
+            $"--job-count=(job list | length)"
             ...$args
     )
 }

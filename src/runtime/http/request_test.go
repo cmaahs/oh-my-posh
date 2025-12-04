@@ -5,19 +5,12 @@ import (
 	"net"
 	"testing"
 
-	"github.com/jandedobbeleer/oh-my-posh/src/cache"
-
 	"github.com/stretchr/testify/assert"
 	testify_ "github.com/stretchr/testify/mock"
 )
 
 type MockedEnvironment struct {
 	testify_.Mock
-}
-
-func (env *MockedEnvironment) Cache() cache.Cache {
-	args := env.Called()
-	return args.Get(0).(cache.Cache)
 }
 
 func (env *MockedEnvironment) HTTPRequest(url string, _ io.Reader, _ int, _ ...RequestModifier) ([]byte, error) {
@@ -68,7 +61,7 @@ func TestRequestResult(t *testing.T) {
 
 		got, err := Do[*data](request, url, nil)
 		assert.Equal(t, tc.ExpectedData, got, tc.Case)
-		if len(tc.ExpectedErrorMessage) == 0 {
+		if tc.ExpectedErrorMessage == "" {
 			assert.Nil(t, err, tc.Case)
 		} else {
 			assert.Equal(t, tc.ExpectedErrorMessage, err.Error(), tc.Case)

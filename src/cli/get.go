@@ -2,7 +2,7 @@ package cli
 
 import (
 	"fmt"
-	"strings"
+	"os"
 	"time"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/cache"
@@ -32,6 +32,7 @@ This command is used to get the value of the following variables:
 		"accent",
 		"toggles",
 		"width",
+		cache.TTL,
 	},
 	Args: NoArgsOrOneValidArg,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -46,16 +47,16 @@ This command is used to get the value of the following variables:
 		}
 
 		flags := &runtime.Flags{
-			Shell: shellName,
+			Shell: os.Getenv("POSH_SHELL"),
 		}
 
 		env := &runtime.Terminal{}
 		env.Init(flags)
-		defer env.Close()
 
 		switch args[0] {
 		case "shell":
-			fmt.Println(env.Shell())
+			fmt.Print(env.Shell())
+			return
 		case "accent":
 			rgb, err := color.GetAccentColor(env)
 			if err != nil {
@@ -63,28 +64,39 @@ This command is used to get the value of the following variables:
 				return
 			}
 			accent := color2.RGB(rgb.R, rgb.G, rgb.B)
-			fmt.Println("#" + accent.Hex())
-		case "toggles":
-			togglesCache, _ := env.Session().Get(cache.TOGGLECACHE)
-			var toggles []string
-			if len(togglesCache) != 0 {
-				toggles = strings.Split(togglesCache, ",")
-			}
-			if len(toggles) == 0 {
-				fmt.Println("No segments are toggled off")
-				return
-			}
-			fmt.Println("Toggled off segments:")
-			for _, toggle := range toggles {
-				fmt.Println("- " + toggle)
-			}
+			fmt.Print("#" + accent.Hex())
+			return
 		case "width":
 			width, err := env.TerminalWidth()
 			if err != nil {
 				fmt.Println("error getting terminal width:", err.Error())
 				return
 			}
-			fmt.Println(width)
+
+			fmt.Print(width)
+			return
+		}
+
+		cache.Init(env.Shell(), cache.Persist)
+
+		defer func() {
+			cache.Close()
+		}()
+
+		switch args[0] {
+		case "toggles":
+			togglesMap, _ := cache.Get[map[string]bool](cache.Session, cache.TOGGLECACHE)
+			if len(togglesMap) == 0 {
+				fmt.Println("No segments are toggled off")
+				return
+			}
+
+			fmt.Println("Toggled off segments:")
+			for toggle := range togglesMap {
+				fmt.Println("- " + toggle)
+			}
+		case cache.TTL:
+			fmt.Print(cache.GetTTL())
 		default:
 			_ = cmd.Help()
 		}
@@ -93,5 +105,4 @@ This command is used to get the value of the following variables:
 
 func init() {
 	RootCmd.AddCommand(getCmd)
-	getCmd.Flags().StringVar(&shellName, "shell", "", "the shell to print for")
 }
