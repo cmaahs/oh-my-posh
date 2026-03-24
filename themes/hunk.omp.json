@@ -8,7 +8,7 @@
           "background": "#c44569",
           "foreground": "#ffffff",
           "leading_diamond": "\ue0b6",
-          "properties": {
+          "options": {
             "windows": "\ue62a"
           },
           "style": "diamond",
@@ -19,7 +19,7 @@
           "background": "#c44569",
           "foreground": "#ffffff",
           "powerline_symbol": "\ue0b0",
-          "properties": {
+          "options": {
             "style": "full"
           },
           "style": "powerline",
@@ -38,7 +38,7 @@
           "background": "#f78fb3",
           "foreground": "#ffffff",
           "powerline_symbol": "\ue0b0",
-          "properties": {
+          "options": {
             "fetch_version": false
           },
           "style": "powerline",
@@ -53,14 +53,14 @@
             "{{ if gt .Ahead 0 }}#89d1dc{{ end }}",
             "{{ if gt .Behind 0 }}#f17c37{{ end }}"
           ],
-          "foreground": "#ffffff",
+          "foreground": "#333333",
           "powerline_symbol": "\ue0b0",
-          "properties": {
+          "options": {
             "fetch_status": true,
             "fetch_upstream_icon": true
           },
           "style": "powerline",
-          "template": " {{ .UpstreamIcon }}{{ .HEAD }}{{ if .Staging.Changed }} \uf046 {{ .Staging.String }}{{ end }}{{ if and (.Working.Changed) (.Staging.Changed) }} |{{ end }}{{ if .Working.Changed }} \uf044 {{ .Working.String }}{{ end }} ",
+          "template": " {{ .UpstreamIcon }} {{ .HEAD }}{{ if .Staging.Changed }} \uf046 {{ .Staging.String }}{{ end }}{{ if and (.Working.Changed) (.Staging.Changed) }} |{{ end }}{{ if .Working.Changed }} \uf044 {{ .Working.String }}{{ end }} ",
           "type": "git"
         }
       ],
@@ -74,7 +74,7 @@
           "foreground": "#ffffff",
           "invert_powerline": true,
           "powerline_symbol": "\ue0b2",
-          "properties": {
+          "options": {
             "always_enabled": true
           },
           "style": "powerline",
@@ -131,5 +131,5 @@
     }
   ],
   "final_space": true,
-  "version": 3
+  "version": 5
 }

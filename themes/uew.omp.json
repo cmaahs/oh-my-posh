@@ -8,20 +8,16 @@
           {
             "foreground": "#BBC4B9",
             "leading_diamond":"<#BFA8BF>~</> ",
-            "properties": {
-              "display_host": true
-            },
             "style": "diamond",
             "template": "{{ .UserName }} ",
             "type": "session"
           },
           {
             "foreground": "#BFA8BF",
-            "properties": {
+            "options": {
               "branch_icon": "\ue725 ",
               "fetch_status": true,
-              "fetch_upstream_icon": true,
-              "fetch_worktree_count": true
+              "fetch_upstream_icon": true
             },
             "style": "diamond",
             "template": "<#fff>{{ .UpstreamIcon }}</>{{ .HEAD }}",
@@ -46,7 +42,7 @@
           },
           {
             "foreground": "#fff",
-            "properties": {
+            "options": {
               "style": "dallas",
               "threshold": 0
             },
@@ -56,7 +52,7 @@
           },
           {
             "foreground": "#BBC4B9",
-            "properties": {
+            "options": {
               "time_format": "Monday <#fff>at</> 3:04 PM"
             },
             "style": "diamond",
@@ -64,7 +60,7 @@
             "type": "time"
           },
           {
-            "properties": {
+            "options": {
               "root_icon": "\uf292 "
             },
             "style": "diamond",
@@ -87,7 +83,7 @@
           {
             "foreground": "#B6D6F2",
             "leading_diamond": "<#BFA8BF>~</>",
-            "properties": {
+            "options": {
               "folder_icon": "\u002F",
               "folder_separator_icon": " \u002F ",
               "home_icon": "home",
@@ -103,7 +99,7 @@
             "foreground_templates": [
               "{{ if gt .Code 0 }}#fff{{ end }}"
             ],
-            "properties": {
+            "options": {
               "always_enabled": true
             },
             "style": "plain",
@@ -120,5 +116,5 @@
       "foreground": "#FEF5ED",
       "template": "\ue285 "
     },
-    "version": 3
+    "version": 4
   }

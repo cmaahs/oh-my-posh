@@ -8,14 +8,15 @@ import (
 	"path/filepath"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/log"
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/path"
-	"gopkg.in/yaml.v3"
+	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
+
+	yaml "go.yaml.in/yaml/v3"
 )
 
 const (
-	FetchStack properties.Property = "fetch_stack"
-	FetchAbout properties.Property = "fetch_about"
+	FetchStack options.Option = "fetch_stack"
+	FetchAbout options.Option = "fetch_about"
 
 	JSON string = "json"
 	YAML string = "yaml"
@@ -49,7 +50,7 @@ type pulumiWorkSpaceFileSpec struct {
 }
 
 func (p *Pulumi) Template() string {
-	return "\U000f0d46 {{ .Stack }}{{if .User }} :: {{ .User }}@{{ end }}{{ if .URL }}{{ .URL }}{{ end }}"
+	return "\ue873 {{ .Stack }}{{if .User }} :: {{ .User }}@{{ end }}{{ if .URL }}{{ .URL }}{{ end }}"
 }
 
 func (p *Pulumi) Enabled() bool {
@@ -63,11 +64,11 @@ func (p *Pulumi) Enabled() bool {
 		return false
 	}
 
-	if p.props.GetBool(FetchStack, false) {
+	if p.options.Bool(FetchStack, false) {
 		p.getPulumiStackName()
 	}
 
-	if p.props.GetBool(FetchAbout, false) {
+	if p.options.Bool(FetchAbout, false) {
 		p.getPulumiAbout()
 	}
 

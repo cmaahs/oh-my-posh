@@ -36,13 +36,13 @@ import Config from "@site/src/components/Config.js";
     ],
     template:
       " CO₂ {{ .Index.Icon }}{{ .Actual.String }} {{ .TrendIcon }} {{ .Forecast.String }} ",
-    properties: {
+    options: {
       http_timeout: 5000,
     },
   }}
 />
 
-## Properties
+## Options
 
 | Name           | Type  | Default | Description                                                                                                                                      |
 | -------------- | :---: | :-----: | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -53,7 +53,7 @@ import Config from "@site/src/components/Config.js";
 :::note default template
 
 ```template
-CO₂ {{ .Index.Icon }}{{ .Actual.String }} {{ .TrendIcon }} {{ .Forecast.String }}
+ CO₂ {{ .Index.Icon }}{{ .Actual.String }} {{ .TrendIcon }} {{ .Forecast.String }}
 ```
 
 :::

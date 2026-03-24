@@ -9,10 +9,10 @@ import TabItem from "@theme/TabItem";
 
 ## Get the source code
 
-The source is hosted on [Github][omp]. When you want to contribute, create a [fork][gh-fork] so you can make changes in
+The source is hosted on [GitHub][omp]. When you want to contribute, create a [fork][gh-fork] so you can make changes in
 your repository and create a pull request in the official Oh My Posh repository.
 
-To clone your fork of Oh My Posh locally, open the terminal and replace `<user>` with your Github username.
+To clone your fork of Oh My Posh locally, open the terminal and replace `<user>` with your GitHub username.
 
 ```powershell
 git clone git@github.com:<user>/oh-my-posh.git
@@ -36,7 +36,7 @@ The codebase is in [go][go], meaning we need a working go setup before we can do
 Have a look at the [go guide][go-started] to get up and running with go in no time!
 
 :::caution
-Oh My Posh needs at least go 1.25.0
+Oh My Posh needs at least go 1.26.0
 :::
 
 ### golangci-lint
@@ -67,6 +67,23 @@ Done! Restart the terminal and you're ready to continue below.
 
 </TabItem>
 </Tabs>
+
+## Install agents and skills
+
+This project uses [APM (Agent Package Manager)][apm] to manage shared AI agent skills.
+After cloning the repository, install APM and run `apm install` to pull in the shared skills:
+
+```powershell
+# Install APM
+pip install apm-cli
+
+# Install shared skills
+apm install
+```
+
+This pulls in shared coding conventions (Go, PowerShell, Markdown, and conventional commits)
+from the [agentic][agentic] repository. Project-specific skills (segment-create and segment-docs)
+are already included in the repository under `.github/skills/`.
 
 ## Configure Visual Studio Code
 
@@ -127,9 +144,9 @@ npm start
 
 This will start a local server on `http://localhost:3000` where you can see your changes.
 
-### Extra tips
+## Extra tips
 
-#### Configure Delve in VS Code
+### Configure Delve in VS Code
 
 [Delve][delve] config is restrictive by default(string limit especially). You can expand some limits in VS Code(`settings.json` or directly in `launch.json`):
 ```
@@ -155,9 +172,6 @@ With everything set up, you're ready to start making changes and create your fir
 [go-started]: https://go.dev/doc/
 [golang-ci-lint]: https://golangci-lint.run
 [golang-ci-lint-local]: https://golangci-lint.run/welcome/install/#local-installation
-[go-bindata]: https://github.com/kevinburke/go-bindata/
-[go-global]: https://github.com/golang/go/issues/40276
-[pr-go-mod]: https://github.com/JanDeDobbeleer/oh-my-posh/blob/main/.github/workflows/gomod.yml
 [gh-pr]: https://github.com/JanDeDobbeleer/oh-my-posh/pulls
 [omp]: https://github.com/JanDeDobbeleer/oh-my-posh
 [gh-fork]: https://guides.github.com/activities/forking/
@@ -167,3 +181,5 @@ With everything set up, you're ready to start making changes and create your fir
 [winget-configuration]: https://github.com/JanDeDobbeleer/oh-my-posh/blob/main/.config/configuration.winget
 [winget]: https://learn.microsoft.com/en-us/windows/package-manager/winget/
 [nodejs]: https://nodejs.org/en/download/
+[apm]: https://github.com/microsoft/apm
+[agentic]: https://github.com/JanDeDobbeleer/agentic

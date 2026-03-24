@@ -6,8 +6,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/mock"
+	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
 	"github.com/jandedobbeleer/oh-my-posh/src/shell"
 
 	"github.com/stretchr/testify/assert"
@@ -24,8 +24,8 @@ func TestSpotifyLinux(t *testing.T) {
 	}{
 		{Case: "no data", ExpectedEnabled: false},
 		{Case: "error", ExpectedEnabled: false, Status: "Error.ServiceUnknown"},
-		{Case: "paused", ExpectedEnabled: true, Expected: "\uF8E3 Candlemass - Spellbreaker", Status: "paused", Artist: "Candlemass", Track: "Spellbreaker"},
-		{Case: "playing", ExpectedEnabled: true, Expected: "\uE602 Candlemass - Spellbreaker", Status: "playing", Artist: "Candlemass", Track: "Spellbreaker"},
+		{Case: "paused", ExpectedEnabled: true, Expected: "\uf04c Candlemass - Spellbreaker", Status: "paused", Artist: "Candlemass", Track: "Spellbreaker"},
+		{Case: "playing", ExpectedEnabled: true, Expected: "\ue602 Candlemass - Spellbreaker", Status: "playing", Artist: "Candlemass", Track: "Spellbreaker"},
 	}
 	for _, tc := range cases {
 		env := new(mock.Environment)
@@ -37,7 +37,7 @@ func TestSpotifyLinux(t *testing.T) {
 		env.On("RunShellCommand", shell.BASH, dbusCMD+" string:Metadata | awk -F '\"' 'BEGIN {RS=\"entry\"}; /'xesam:title'/ {t=$4} END {print t}'").Return(tc.Track)
 
 		s := &Spotify{}
-		s.Init(properties.Map{}, env)
+		s.Init(options.Map{}, env)
 
 		got := s.Enabled()
 
@@ -68,7 +68,7 @@ func TestSpotifyWSL(t *testing.T) {
 		env.On("RunCommand", "powershell.exe", []string{"-NoProfile", "-NonInteractive", "-Command", psCommand}).Return(tc.Title, tc.Error)
 
 		s := &Spotify{}
-		s.Init(properties.Map{}, env)
+		s.Init(options.Map{}, env)
 
 		got := s.Enabled()
 

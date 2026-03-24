@@ -1,17 +1,12 @@
 package prompt
 
 import (
-	"sync"
+	"time"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/config"
+	"github.com/jandedobbeleer/oh-my-posh/src/log"
+	runjobs "github.com/jandedobbeleer/oh-my-posh/src/runtime/jobs"
 	"github.com/jandedobbeleer/oh-my-posh/src/terminal"
-)
-
-const (
-	// Threshold for using goroutine pool vs individual goroutines
-	goroutinePoolThreshold = 10
-	// Size of the worker pool
-	workerPoolSize = 4
 )
 
 type result struct {
@@ -28,12 +23,7 @@ func (e *Engine) writeBlockSegments(block *config.Block) (string, int) {
 
 	out := make(chan result, length)
 
-	// Use goroutine pool for large numbers of segments to reduce overhead
-	if length > goroutinePoolThreshold {
-		e.writeSegmentsWithPool(block.Segments, out)
-	} else {
-		e.writeSegmentsConcurrently(block.Segments, out)
-	}
+	e.writeSegmentsConcurrently(block.Segments, out)
 
 	e.writeSegments(out, block)
 
@@ -52,41 +42,65 @@ func (e *Engine) writeBlockSegments(block *config.Block) (string, int) {
 // writeSegmentsConcurrently uses individual goroutines for each segment
 func (e *Engine) writeSegmentsConcurrently(segments []*config.Segment, out chan result) {
 	for i, segment := range segments {
+		// In streaming mode, pre-register all segments as pending
+		// This ensures countPendingSegments() sees them before timeout occurs
+		if e.Env.Flags().Streaming {
+			segment.Timeout = e.Config.Streaming
+			e.pendingSegments.Store(segment.Name(), true)
+		}
+
 		go func(segment *config.Segment, index int) {
-			segment.Execute(e.Env)
+			if segment.Timeout > 0 {
+				e.executeSegmentWithTimeout(segment)
+			} else {
+				segment.Execute(e.Env)
+			}
+
 			out <- result{segment, index}
+
+			// In streaming mode, clean up pre-registered segments that completed before timeout
+			if e.Env.Flags().Streaming && segment.Timeout > 0 && !segment.Pending {
+				e.pendingSegments.Delete(segment.Name())
+			}
 		}(segment, i)
 	}
 }
 
-// writeSegmentsWithPool uses a worker pool to process segments
-func (e *Engine) writeSegmentsWithPool(segments []*config.Segment, out chan result) {
-	tasks := make(chan result, len(segments))
-	var wg sync.WaitGroup
+// executeSegmentWithTimeout handles segment execution with timeout logic
+func (e *Engine) executeSegmentWithTimeout(segment *config.Segment) {
+	done := make(chan bool)
+	gidChan := make(chan uint64, 1)
 
-	// Start worker pool
-	for range workerPoolSize {
-		wg.Go(func() {
-			for task := range tasks {
-				task.segment.Execute(e.Env)
-				out <- task
-			}
-		})
-	}
-
-	// Send tasks to workers
 	go func() {
-		defer close(tasks)
-		for i, segment := range segments {
-			tasks <- result{segment, i}
+		gidChan <- runjobs.CurrentGID()
+		segment.Execute(e.Env)
+		close(done)
+	}()
+
+	gid := <-gidChan
+
+	select {
+	case <-done:
+		// Completed before timeout - nothing extra to do
+	case <-time.After(time.Duration(segment.Timeout) * time.Millisecond):
+		log.Errorf("timeout after %dms for segment: %s", segment.Timeout, segment.Name())
+
+		// When streaming is enabled, don't kill goroutines - let them continue executing
+		if e.Env.Flags().Streaming {
+			segment.Pending = true
+			// Note: Do NOT set segment.Enabled here - that would race with Execute()
+			// Rendering logic handles Pending state to display "..." text
+
+			// Track this segment as pending and continue execution in background
+			e.trackPendingSegment(segment, done)
+			return
 		}
-	}()
 
-	// Wait for all workers to complete
-	go func() {
-		wg.Wait()
-		close(out)
-	}()
+		// For non-streaming mode, kill the goroutine
+		if err := runjobs.KillGoroutineChildren(gid); err != nil {
+			log.Errorf("failed to kill child processes for goroutine %d (segment: %s): %v", gid, segment.Name(), err)
+		}
+	}
 }
 
 func (e *Engine) writeSegments(out chan result, block *config.Block) {
@@ -135,7 +149,8 @@ func (e *Engine) writeSegments(out chan result, block *config.Block) {
 }
 
 func (e *Engine) writeSegment(block *config.Block, segment *config.Segment) {
-	if !segment.Enabled && segment.ResolveStyle() != config.Accordion {
+	// Allow pending segments to render (they show "..." text)
+	if !segment.Pending && !segment.Enabled && segment.ResolveStyle() != config.Accordion {
 		return
 	}
 

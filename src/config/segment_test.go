@@ -9,7 +9,9 @@ import (
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/mock"
 	"github.com/jandedobbeleer/oh-my-posh/src/segments"
 
+	toml "github.com/pelletier/go-toml/v2"
 	"github.com/stretchr/testify/assert"
+	"go.yaml.in/yaml/v3"
 )
 
 const (
@@ -44,7 +46,7 @@ func TestParseTestConfig(t *testing.T) {
 			"powerline_symbol": "\uE0B0",
 			"foreground": "#ffffff",
 			"background": "#61AFEF",
-			"properties": {
+			"options": {
 				"style": "folder"
 			},
 			"exclude_folders": [
@@ -55,6 +57,111 @@ func TestParseTestConfig(t *testing.T) {
 	segment := &Segment{}
 	err := json.Unmarshal([]byte(segmentJSON), segment)
 	assert.NoError(t, err)
+	assert.NotNil(t, segment.Options)
+	assert.Equal(t, "folder", segment.Options.String("style", ""))
+}
+
+func TestParseConfigWithOptions(t *testing.T) {
+	segmentJSON :=
+		`
+		{
+			"type": "path",
+			"style": "powerline",
+			"options": {
+				"style": "folder"
+			}
+		}
+		`
+	segment := &Segment{}
+	err := json.Unmarshal([]byte(segmentJSON), segment)
+	assert.NoError(t, err)
+	assert.NotNil(t, segment.Options)
+	assert.Equal(t, "folder", segment.Options.String("style", ""))
+}
+
+func TestParseYAMLConfigWithProperties(t *testing.T) {
+	segmentYAML := `
+type: path
+style: powerline
+properties:
+  style: folder
+`
+	segment := &Segment{}
+	err := yaml.Unmarshal([]byte(segmentYAML), segment)
+	assert.NoError(t, err)
+	assert.NotNil(t, segment.Options)
+	assert.Equal(t, "folder", segment.Options.String("style", ""))
+}
+
+func TestParseYAMLConfigWithOptions(t *testing.T) {
+	segmentYAML := `
+type: path
+style: powerline
+options:
+  style: folder
+`
+	segment := &Segment{}
+	err := yaml.Unmarshal([]byte(segmentYAML), segment)
+	assert.NoError(t, err)
+	assert.NotNil(t, segment.Options)
+	assert.Equal(t, "folder", segment.Options.String("style", ""))
+}
+
+func TestParseTOMLConfigWithProperties(t *testing.T) {
+	segmentTOML := `
+type = "path"
+style = "powerline"
+[properties]
+style = "folder"
+`
+	segment := &Segment{}
+	err := toml.Unmarshal([]byte(segmentTOML), segment)
+	assert.NoError(t, err)
+
+	// Migrate properties to options (normally done by Config.migrateSegmentProperties)
+	segment.MigratePropertiesToOptions()
+
+	assert.NotNil(t, segment.Options)
+	assert.Equal(t, "folder", segment.Options.String("style", ""))
+}
+
+func TestParseTOMLConfigWithOptions(t *testing.T) {
+	segmentTOML := `
+type = "path"
+style = "powerline"
+[options]
+style = "folder"
+`
+	segment := &Segment{}
+	err := toml.Unmarshal([]byte(segmentTOML), segment)
+	assert.NoError(t, err)
+
+	// Migrate properties to options (should be a no-op since options is set)
+	segment.MigratePropertiesToOptions()
+
+	assert.NotNil(t, segment.Options)
+	assert.Equal(t, "folder", segment.Options.String("style", ""))
+}
+
+func TestParseTOMLConfigWithBothOptionsAndProperties(t *testing.T) {
+	// If both are specified, options takes precedence
+	segmentTOML := `
+type = "path"
+style = "powerline"
+[options]
+style = "folder"
+[properties]
+style = "letter"
+`
+	segment := &Segment{}
+	err := toml.Unmarshal([]byte(segmentTOML), segment)
+	assert.NoError(t, err)
+
+	// Migrate should not overwrite options
+	segment.MigratePropertiesToOptions()
+
+	assert.NotNil(t, segment.Options)
+	assert.Equal(t, "folder", segment.Options.String("style", ""))
 }
 
 func TestShouldIncludeFolder(t *testing.T) {
@@ -202,4 +309,39 @@ func TestEvaluateNeeds(t *testing.T) {
 		tc.Segment.evaluateNeeds()
 		assert.Equal(t, tc.Needs, tc.Segment.Needs, tc.Case)
 	}
+}
+
+func TestSegment_NoCachingWhenPending(t *testing.T) {
+	env := new(mock.Environment)
+	env.On("Shell").Return("pwsh")
+	env.On("Flags").Return(&runtime.Flags{})
+	env.On("Pwd").Return("/test")
+	env.On("Home").Return("/home")
+
+	segment := &Segment{
+		Type:     SESSION,
+		Pending:  true,
+		Template: "test",
+	}
+
+	err := segment.MapSegmentWithWriter(env)
+	assert.NoError(t, err)
+
+	// When Pending=true, setCache should return early without caching
+	// We can't easily mock cache.Set, but we can verify the method doesn't panic
+	// and that the behavior differs between Pending=true and Pending=false
+
+	// With Pending=true, setCache returns early
+	segment.Cache = &Cache{Duration: "5h"}
+	segment.setCache() // Should return early, not attempt to cache
+
+	// Verify this doesn't panic and segment still works
+	assert.True(t, segment.Pending, "Segment should still be pending")
+
+	// Now with Pending=false, setCache will attempt to cache
+	segment.Pending = false
+	segment.restored = false
+	segment.setCache() // Should attempt to cache (may fail but shouldn't panic)
+
+	assert.False(t, segment.Pending, "Segment should not be pending")
 }

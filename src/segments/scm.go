@@ -7,17 +7,17 @@ import (
 	"strings"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/log"
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime"
+	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
 	"github.com/jandedobbeleer/oh-my-posh/src/template"
 	"github.com/jandedobbeleer/oh-my-posh/src/text"
 )
 
 const (
 	// Fallback to native command
-	NativeFallback properties.Property = "native_fallback"
+	NativeFallback options.Option = "native_fallback"
 	// Override the built-in status formats
-	StatusFormats properties.Property = "status_formats"
+	StatusFormats options.Option = "status_formats"
 )
 
 // ScmStatus represents part of the status of a repository
@@ -88,6 +88,7 @@ type Scm struct {
 
 	Dir             string
 	RepoName        string
+	Upstream        string
 	mainSCMDir      string
 	scmDir          string
 	repoRootDir     string
@@ -99,7 +100,7 @@ type Scm struct {
 
 const (
 	// BranchTemplate allows to specify a template for the branch name
-	BranchTemplate properties.Property = "branch_template"
+	BranchTemplate options.Option = "branch_template"
 )
 
 func (s *Scm) RelativeDir() string {
@@ -124,7 +125,7 @@ func (s *Scm) RelativeDir() string {
 }
 
 func (s *Scm) formatBranch(branch string) string {
-	mappedBranches := s.props.GetKeyValueMap(MappedBranches, make(map[string]string))
+	mappedBranches := s.options.KeyValueMap(MappedBranches, make(map[string]string))
 
 	// sort the keys alphabetically
 	keys := make([]string, 0, len(mappedBranches))
@@ -157,12 +158,12 @@ func (s *Scm) formatBranch(branch string) string {
 		break
 	}
 
-	branchTemplate := s.props.GetString(BranchTemplate, "")
+	branchTemplate := s.options.String(BranchTemplate, "")
 	if branchTemplate == "" {
 		return branch
 	}
 
-	txt, err := template.Render(branchTemplate, struct{ Branch string }{Branch: branch})
+	txt, err := template.Render(branchTemplate, struct{ Branch, Upstream string }{Branch: branch, Upstream: s.Upstream})
 	if err != nil {
 		return branch
 	}
@@ -211,7 +212,7 @@ func (s *Scm) hasCommand(command string) bool {
 	s.CommandMissing = true
 
 	// only use the native fallback when set by the user
-	if s.IsWslSharedPath && s.props.GetBool(NativeFallback, false) {
+	if s.IsWslSharedPath && s.options.Bool(NativeFallback, false) {
 		command = strings.TrimSuffix(command, ".exe")
 		if s.env.HasCommand(command) {
 			s.command = command

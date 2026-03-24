@@ -1,5 +1,5 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
   "type": "object",
   "title": "The Oh My Posh theme definition",
@@ -90,26 +90,11 @@
       "description": "The string to display when the command is not available",
       "default": ""
     },
-    "version_url_template": {
-      "type": "string",
-      "title": "Version Url Template",
-      "description": "Template that creates the URL of the version info / release notes",
-      "default": ""
-    },
     "status_formats": {
       "type": "object",
       "title": "Status string formats",
       "description": "Override the status format for a specific change. Example: {\"Added\": \"Added: %d\"}",
       "default": {}
-    },
-    "folders": {
-      "type": "array",
-      "title": "Folders",
-      "description": "The folders to look for when determining if a folder is a workspace",
-      "default": [],
-      "items": {
-        "type": "string"
-      }
     },
     "native_fallback": {
       "type": "boolean",
@@ -134,6 +119,61 @@
       "title": "Cache duration",
       "description": "The duration for which the segment will be cached. This is parsed using the `time.ParseDuration` function from the Go standard library (see https://pkg.go.dev/time#ParseDuration for details).",
       "pattern": "^(none|infinite|([0-9]+(h|m|s))+)$"
+    },
+    "language_options": {
+      "type": "object",
+      "title": "Language segment options",
+      "description": "Common options for language segments",
+      "properties": {
+        "home_enabled": {
+          "$ref": "#/definitions/home_enabled"
+        },
+        "fetch_version": {
+          "$ref": "#/definitions/fetch_version"
+        },
+        "cache_duration": {
+          "$ref": "#/definitions/cache_duration"
+        },
+        "missing_command_text": {
+          "$ref": "#/definitions/missing_command_text"
+        },
+        "display_mode": {
+          "$ref": "#/definitions/display_mode"
+        },
+        "version_url_template": {
+          "type": "string",
+          "title": "Version Url Template",
+          "description": "Template that creates the URL of the version info / release notes",
+          "default": ""
+        },
+        "tooling": {
+          "type": "array",
+          "title": "Tooling",
+          "description": "The tooling to use for fetching the version",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "extensions": {
+          "type": "array",
+          "title": "Extensions",
+          "description": "The extensions to look for when determining if the current directory is a project",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "folders": {
+          "type": "array",
+          "title": "Folders",
+          "description": "The folders to look for when determining if a folder is a workspace",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     },
     "filler": {
       "type": "string",
@@ -265,6 +305,18 @@
           "description": "https://ohmyposh.dev/docs/configuration/block#newline",
           "default": false
         },
+        "filler": {
+          "type": "string",
+          "title": "Filler",
+          "description": "https://ohmyposh.dev/docs/configuration/block#filler",
+          "default": ""
+        },
+        "overflow": {
+          "type": "string",
+          "title": "Overflow",
+          "description": "https://ohmyposh.dev/docs/configuration/block#overflow",
+          "default": ""
+        },
         "leading_diamond": {
           "type": "string",
           "title": "Leading diamond",
@@ -285,6 +337,17 @@
           "items": {
             "$ref": "#/definitions/segment"
           }
+        },
+        "force": {
+          "type": "boolean",
+          "title": "Force",
+          "description": "https://ohmyposh.dev/docs/configuration/block#force",
+          "default": false
+        },
+        "index": {
+          "type": "integer",
+          "title": "Index",
+          "description": "https://ohmyposh.dev/docs/configuration/block#index"
         }
       }
     },
@@ -319,6 +382,8 @@
             "cds",
             "cf",
             "cftarget",
+            "claude",
+            "clojure",
             "cmake",
             "copilot",
             "connection",
@@ -351,6 +416,7 @@
             "mercurial",
             "mojo",
             "mvn",
+            "nba",
             "nbgv",
             "nightscout",
             "nim",
@@ -371,6 +437,7 @@
             "python",
             "quasar",
             "r",
+            "ramadan",
             "react",
             "root",
             "ruby",
@@ -387,10 +454,12 @@
             "swift",
             "sysinfo",
             "talosctl",
+            "taskwarrior",
             "tauri",
             "terraform",
             "text",
             "time",
+            "todoist",
             "ui5tooling",
             "umbraco",
             "unity",
@@ -398,6 +467,7 @@
             "v",
             "vala",
             "wakatime",
+            "winget",
             "winreg",
             "withings",
             "xmake",
@@ -464,11 +534,19 @@
           "description": "https://ohmyposh.dev/docs/configuration/segment",
           "default": 0
         },
+        "options": {
+          "type": "object",
+          "title": "Segment options, used to change behavior/displaying",
+          "description": "https://ohmyposh.dev/docs/configuration/segment#options",
+          "default": {}
+        },
         "properties": {
           "type": "object",
-          "title": "Segment Properties, used to change behavior/displaying",
-          "description": "https://ohmyposh.dev/docs/configuration/segment#properties",
-          "default": {}
+          "title": "Segment Properties (DEPRECATED)",
+          "description": "DEPRECATED: Use 'options' instead. This field is maintained for backward compatibility with version 3 configs and will be removed in a future version. See https://ohmyposh.dev/docs/configuration/segment#options",
+          "default": {},
+          "deprecated": true,
+          "deprecationMessage": "The 'properties' field is deprecated. Please rename it to 'options' in your configuration."
         },
         "interactive": {
           "type": "boolean",
@@ -516,10 +594,17 @@
               "default": "folder",
               "enum": [
                 "folder",
-                "session"
+                "session",
+                "device"
               ]
             }
           }
+        },
+        "placeholder": {
+          "type": "string",
+          "title": "Placeholder text",
+          "description": "Text to display while the segment is loading in streaming mode. See https://ohmyposh.dev/docs/experimental/streaming",
+          "default": "..."
         }
       },
       "allOf": [
@@ -535,40 +620,39 @@
             "title": "Angular CLI Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/angular",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is an Angular project",
                     "default": [
                       "angular.json"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "angular"
+                    ]
                   }
                 }
               }
             }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "argocd"
+              }
+            }
+          },
+          "then": {
+            "title": "ArgoCD Segment",
+            "description": "https://ohmyposh.dev/docs/segments/cli/argocd"
           }
         },
         {
@@ -583,36 +667,22 @@
             "title": "Aurelia Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/aurelia",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is an Aurelia project",
                     "default": [
                       "package.json"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "aurelia"
+                    ]
                   }
                 }
               }
@@ -631,7 +701,7 @@
             "title": "AWS Segment",
             "description": "https://ohmyposh.dev/docs/segments/cloud/aws",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "display_default": {
                     "type": "boolean",
@@ -639,7 +709,8 @@
                     "description": "Display the segment when default user or not",
                     "default": true
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -656,19 +727,20 @@
             "title": "Azure Segment",
             "description": "https://ohmyposh.dev/docs/segments/cloud/az",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "source": {
                     "type": "string",
                     "title": "Source",
-                    "description": "https://ohmyposh.dev/docs/segments/cloud/az#properties",
+                    "description": "https://ohmyposh.dev/docs/segments/cloud/az#options",
                     "default": "first_match",
                     "enum": [
                       "cli",
                       "pwsh"
                     ]
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -698,21 +770,27 @@
             "title": "Azure Function Segment",
             "description": "https://ohmyposh.dev/docs/segments/cloud/azfunc",
             "properties": {
-              "properties": {
-                "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
                   }
-                }
+                ],
+                "properties": {
+                  "extensions": {
+                    "default": [
+                      "host.json",
+                      "local.settings.json",
+                      "function.json"
+                    ]
+                  },
+                  "tooling": {
+                    "default": [
+                      "func"
+                    ]
+                  }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -729,7 +807,7 @@
             "title": "Battery Segment",
             "description": "https://ohmyposh.dev/docs/segments/system/battery",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "display_error": {
                     "type": "boolean",
@@ -761,7 +839,8 @@
                     "description": "Text/icon to display when on AC power",
                     "default": ""
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -778,33 +857,14 @@
             "title": "Bazel Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/bazel",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
-                  "icon": {
-                    "type": "string",
-                    "title": "Icon",
-                    "description": "The icon representing Bazel's logo",
-                    "default": "\ue63a"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Bazel workspace",
                     "default": [
                       "*.bazel",
                       "*.bzl",
@@ -812,23 +872,25 @@
                       "WORKSPACE",
                       ".bazelrc",
                       ".bazelversion"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
                   "folders": {
-                    "type": "array",
-                    "title": "Folders",
-                    "description": "The folders to look for when determining if a folder is a Bazel workspace",
                     "default": [
                       "bazel-bin",
                       "bazel-out",
                       "bazel-testlogs"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
+                  },
+                  "tooling": {
+                    "default": [
+                      "bazel"
+                    ]
+                  },
+                  "icon": {
+                    "type": "string",
+                    "title": "Icon",
+                    "description": "The icon representing Bazel's logo",
+                    "default": "\ue63a"
                   }
                 }
               }
@@ -847,7 +909,7 @@
             "title": "Brewfather Batch Status",
             "description": "https://ohmyposh.dev/docs/segments/web/brewfather",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "user_id": {
                     "type": "string",
@@ -880,81 +942,82 @@
                     "type": "string",
                     "title": "Temperature trend icon, very high positive change",
                     "description": "Delta between this and prior temperature reading is very high (> 4C by default), available intemplate as .TemperatureTrend",
-                    "default": "↑↑"
+                    "default": "\u2191\u2191"
                   },
                   "singleup_icon": {
                     "type": "string",
                     "title": "Temperature trend icon, high positive change",
                     "description": "Delta between this and prior temperature reading is high (2C < delta < 4C by default), available intemplate as .TemperatureTrend",
-                    "default": "↑"
+                    "default": "\u2191"
                   },
                   "fortyfiveup_icon": {
                     "type": "string",
                     "title": "Temperature trend icon, positive change",
                     "description": "Delta between this and prior temperature reading is positive (0.5C < delta < 2C by default), available intemplate as .TemperatureTrend",
-                    "default": "↗"
+                    "default": "\u2197"
                   },
                   "flat_icon": {
                     "type": "string",
                     "title": "Temperature trend icon, flat/small change",
                     "description": "Delta between this and prior temperature and this temperature reading (< +-0.5C change), available intemplate as .TemperatureTrend",
-                    "default": "→"
+                    "default": "\u2192"
                   },
                   "fortyfivedown_icon": {
                     "type": "string",
                     "title": "Temperature trend icon, v. negative change",
                     "description": "Delta between this and prior temperature reading is negative (-0.5C > delta > -2C by default), available intemplate as .TemperatureTrend",
-                    "default": "↘"
+                    "default": "\u2198"
                   },
                   "singledown_icon": {
                     "type": "string",
                     "title": "Temperature trend icon, high negative change",
                     "description": "Delta between this and prior temperature reading is large negative (-2C > delta > -4C by default), available intemplate as .TemperatureTrend",
-                    "default": "↓"
+                    "default": "\u2193"
                   },
                   "doubledown_icon": {
                     "type": "string",
                     "title": "Temperature trend icon, very high negative change",
                     "description": "Delta between this and prior temperature reading is very large negative (> -4C by default), available intemplate as .TemperatureTrend",
-                    "default": "↓↓"
+                    "default": "\u2193\u2193"
                   },
                   "planning_status_icon": {
                     "type": "string",
                     "title": "Icon for batch in planning",
                     "description": "Available in template as .StatusIcon",
-                    "default": "\uF8EA"
+                    "default": "\uf8ea"
                   },
                   "brewing_status_icon": {
                     "type": "string",
                     "title": "Icon for batch being brewed",
                     "description": "Available in template as .StatusIcon",
-                    "default": "\uF7DE"
+                    "default": "\uf7de"
                   },
                   "fermenting_status_icon": {
                     "type": "string",
                     "title": "Icon for batch fermenting",
                     "description": "Available in template as .StatusIcon",
-                    "default": "\uF499"
+                    "default": "\uf499"
                   },
                   "conditioning_status_icon": {
                     "type": "string",
                     "title": "Icon for batch conditioning",
                     "description": "Available in template as .StatusIcon",
-                    "default": "\uE372"
+                    "default": "\ue372"
                   },
                   "completed_status_icon": {
                     "type": "string",
                     "title": "Icon for completed batch",
                     "description": "Available in template as .StatusIcon",
-                    "default": "\uF7A5"
+                    "default": "\uf7a5"
                   },
                   "archived_status_icon": {
                     "type": "string",
                     "title": "Icon for archived batch",
                     "description": "Available in template as .StatusIcon",
-                    "default": "\uF187"
+                    "default": "\uf187"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -971,38 +1034,24 @@
             "title": "Buf Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/buf",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Buf workspace",
                     "default": [
                       "buf.yaml",
                       "buf.gen.yaml",
                       "buf.work.yaml"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "buf"
+                    ]
                   }
                 }
               }
@@ -1021,37 +1070,23 @@
             "title": "Bun CLI Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/bun",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Bun workspace",
                     "default": [
                       "bun.lockb",
                       "bun.lock"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "bun"
+                    ]
                   }
                 }
               }
@@ -1068,14 +1103,15 @@
           },
           "then": {
             "title": "Carbon Intensity Segment",
-            "description": "Displays the actual and forecast carbon intensity in gCO2/kWh using the Carbon Intensity API",
+            "description": "https://ohmyposh.dev/docs/segments/web/carbonintensity",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "http_timeout": {
                     "$ref": "#/definitions/http_timeout"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -1092,38 +1128,24 @@
             "title": "CDS (SAP CAP) segment",
             "description": "https://ohmyposh.dev/docs/segments/cloud/cds",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is a CDS project",
                     "default": [
                       ".cdsrc.json",
                       ".cdsrc-private.json",
                       "*.cds"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "cds"
+                    ]
                   }
                 }
               }
@@ -1142,37 +1164,23 @@
             "title": "Clound Foundry CLI segment",
             "description": "https://ohmyposh.dev/docs/segments/cloud/cf",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is a Cloud Foundry project",
                     "default": [
                       "manifest.yml",
                       "mta.yaml"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "cf"
+                    ]
                   }
                 }
               }
@@ -1191,17 +1199,68 @@
             "title": "Clound Foundry Target segment",
             "description": "https://ohmyposh.dev/docs/segments/cloud/cftarget",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "display_mode": {
-                    "type": "string",
-                    "title": "Display Mode",
-                    "description": "Determines whether the segment is displayed always or only if a file matching the extensions are present in the current folder",
+                    "$ref": "#/definitions/display_mode",
                     "enum": [
                       "always",
                       "files"
                     ],
                     "default": "always"
+                  },
+                  "files": {
+                    "type": "array",
+                    "title": "Files",
+                    "description": "The files to display in the segment",
+                    "default": [
+                      "manifest.yml"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "unevaluatedProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "clojure"
+              }
+            }
+          },
+          "then": {
+            "title": "Clojure Segment",
+            "description": "https://ohmyposh.dev/docs/segments/languages/clojure",
+            "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
+                "properties": {
+                  "extensions": {
+                    "default": [
+                      "project.clj",
+                      "deps.edn",
+                      "build.boot",
+                      "bb.edn",
+                      "*.clj",
+                      "*.cljc",
+                      "*.cljs"
+                    ]
+                  },
+                  "tooling": {
+                    "default": [
+                      "clojure",
+                      "lein"
+                    ]
                   }
                 }
               }
@@ -1220,39 +1279,43 @@
             "title": "Cmake Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/cmake",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a CMake workspace",
                     "default": [
                       "*.cmake",
                       "CMakeLists.txt"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "cmake"
+                    ]
                   }
                 }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "claude"
+              }
+            }
+          },
+          "then": {
+            "title": "Claude Code Segment",
+            "description": "https://ohmyposh.dev/docs/segments/cli/claude",
+            "properties": {
+              "options": {
+                "unevaluatedProperties": false
               }
             }
           }
@@ -1269,17 +1332,17 @@
             "title": "GitHub Copilot Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/copilot",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "http_timeout": {
                     "$ref": "#/definitions/http_timeout"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
         },
-
         {
           "if": {
             "properties": {
@@ -1292,7 +1355,7 @@
             "title": "Connection Segment",
             "description": "https://ohmyposh.dev/docs/segments/system/connection",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "type": {
                     "type": "string",
@@ -1305,26 +1368,9 @@
                       "bluetooth"
                     ],
                     "default": "wifi|ethernet"
-                  },
-                  "unit": {
-                    "type": "string",
-                    "title": "Transfer speed unit",
-                    "enum": [
-                      "none",
-                      "b",
-                      "bps",
-                      "K",
-                      "Kbps",
-                      "M",
-                      "Mbps",
-                      "G",
-                      "Gbps",
-                      "T",
-                      "Tbps"
-                    ],
-                    "default": "none"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -1341,41 +1387,23 @@
             "title": "Crystal Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/crystal",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Crystal workspace",
                     "default": [
                       "*.cr",
                       "shard.yml"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "crystal"
+                    ]
                   }
                 }
               }
@@ -1394,51 +1422,31 @@
             "title": "Dart Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/dart",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Dart workspace",
                     "default": [
                       "*.dart",
                       "pubspec.yaml",
                       "pubspec.yml",
                       "pubspec.lock"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
                   "folders": {
-                    "type": "array",
-                    "title": "Folders",
-                    "description": "The folders to look for when determining if a folder is a Dart workspace",
                     "default": [
                       ".dart_tool"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
+                  },
+                  "tooling": {
+                    "default": [
+                      "fvm",
+                      "dart"
+                    ]
                   }
                 }
               }
@@ -1457,38 +1465,24 @@
             "title": "Deno CLI Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/deno",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Deno workspace",
                     "default": [
                       "*.js",
                       "*.ts",
                       "deno.json"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "deno"
+                    ]
                   }
                 }
               }
@@ -1532,18 +1526,32 @@
             "title": "Docker Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/docker",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
+                  "display_mode": {
+                    "$ref": "#/definitions/display_mode",
+                    "enum": [
+                      "files",
+                      "context"
+                    ]
+                  },
+                  "extensions": {
+                    "default": [
+                      "compose.yml",
+                      "compose.yaml",
+                      "docker-compose.yml",
+                      "docker-compose.yaml",
+                      "Dockerfile"
+                    ]
+                  },
                   "fetch_context": {
                     "type": "boolean",
                     "title": "Fetch Context",
                     "description": "Fetch the Docker context",
                     "default": true
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -1560,31 +1568,14 @@
             "title": "Dotnet Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/dotnet",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a .NET workspace",
                     "default": [
                       "*.cs",
                       "*.csx",
@@ -1598,13 +1589,18 @@
                       "*.fsproj",
                       "*.vbproj",
                       "global.json"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "dotnet"
+                    ]
+                  },
+                  "fetch_sdk_version": {
+                    "type": "boolean",
+                    "title": "Fetch SDK Version",
+                    "description": "Fetch the .NET SDK version used in global.json",
+                    "default": false
                   }
                 }
               }
@@ -1623,41 +1619,24 @@
             "title": "Elixir Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/elixir",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Elixir workspace",
                     "default": [
                       "*.ex",
                       "*.exs"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "asdf",
+                      "elixir"
+                    ]
                   }
                 }
               }
@@ -1676,7 +1655,7 @@
             "title": "Displays the execution time of the previously executed command",
             "description": "https://ohmyposh.dev/docs/segments/system/executiontime",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "always_enabled": {
                     "type": "boolean",
@@ -1685,7 +1664,7 @@
                     "default": false
                   },
                   "threshold": {
-                    "type": "number",
+                    "type": "integer",
                     "title": "Threshold",
                     "description": "minimum duration (milliseconds) required to enable this segment",
                     "default": 500
@@ -1703,11 +1682,14 @@
                       "houston",
                       "amarillo",
                       "round",
-                      "lucky7"
+                      "lucky7",
+                      "iso8601",
+                      "iso8601ms"
                     ],
                     "default": "austin"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -1737,47 +1719,31 @@
             "title": "Flutter Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/flutter",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Flutter workspace",
                     "default": [
                       "*.dart",
                       "pubspec.yaml",
                       "pubspec.yml",
                       "pubspec.lock"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
                   "folders": {
-                    "type": "array",
-                    "title": "Folders",
-                    "description": "The folders to look for when determining if a folder is a Flutter workspace",
                     "default": [
                       ".dart_tool"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
+                  },
+                  "tooling": {
+                    "default": [
+                      "fvm",
+                      "flutter"
+                    ]
                   }
                 }
               }
@@ -1796,31 +1762,14 @@
             "title": "Fortran Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/fortran",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Fortran workspace",
                     "default": [
                       "fpm.toml",
                       "*.f",
@@ -1839,13 +1788,12 @@
                       "*.F95",
                       "*.F03",
                       "*.F08"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "gfortran"
+                    ]
                   }
                 }
               }
@@ -1864,12 +1812,13 @@
             "title": "Fossil Segment",
             "description": "https://ohmyposh.dev/docs/segments/scm/fossil",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "native_fallback": {
                     "$ref": "#/definitions/native_fallback"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -1899,18 +1848,18 @@
             "title": "Git Segment",
             "description": "https://ohmyposh.dev/docs/segments/scm/git",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "fetch_status": {
                     "type": "boolean",
                     "title": "Display Status",
                     "description": "Display the local changes or not",
-                    "default": true
+                    "default": false
                   },
-                  "fetch_worktree_count": {
+                  "fetch_push_status": {
                     "type": "boolean",
-                    "title": "Display Worktree Count",
-                    "description": "Display the worktree count or not",
+                    "title": "Display Push Status",
+                    "description": "Display the push-remote ahead/behind information or not",
                     "default": false
                   },
                   "fetch_upstream_icon": {
@@ -1925,6 +1874,12 @@
                     "description": "Fetch info when in a bare repo or not",
                     "default": false
                   },
+                  "fetch_user": {
+                    "type": "boolean",
+                    "title": "Fetch the user",
+                    "description": "Fetch the current configured user for the repository",
+                    "default": false
+                  },
                   "disable_with_jj": {
                     "type": "boolean",
                     "title": "Disable with Jujutsu",
@@ -1935,7 +1890,7 @@
                     "type": "string",
                     "title": "Branch Icon",
                     "description": "The icon to use in front of the git branch name",
-                    "default": "\uE0A0 "
+                    "default": "\ue0a0 "
                   },
                   "branch_identical_icon": {
                     "type": "string",
@@ -1965,85 +1920,91 @@
                     "type": "string",
                     "title": "Commit Icon",
                     "description": "Icon/text to display before the commit context (detached HEAD)",
-                    "default": "\uF417"
+                    "default": "\uf417"
                   },
                   "tag_icon": {
                     "type": "string",
                     "title": "Tag Icon",
                     "description": "Icon/text to display before the tag context",
-                    "default": "\uF412"
+                    "default": "\uf412"
                   },
                   "rebase_icon": {
                     "type": "string",
                     "title": "Rebase Icon",
                     "description": "Icon/text to display before the context when in a rebase",
-                    "default": "\uE728"
+                    "default": "\ue728"
                   },
                   "cherry_pick_icon": {
                     "type": "string",
                     "title": "Cherry-pick Icon",
                     "description": "Icon/text to display before the context when doing a cherry-pick",
-                    "default": "\uE29B"
+                    "default": "\ue29b"
                   },
                   "revert_icon": {
                     "type": "string",
                     "title": "Revert Icon",
                     "description": "Icon/text to display before the context when doing a revert",
-                    "default": "\uF0E2"
+                    "default": "\uf0e2"
                   },
                   "merge_icon": {
                     "type": "string",
                     "title": "Merge Icon",
                     "description": "Icon/text to display before the merge context",
-                    "default": "\uE727"
+                    "default": "\ue727"
                   },
                   "no_commits_icon": {
                     "type": "string",
                     "title": "No Commits Icon",
                     "description": "Icon/text to display when there are no commits in the repo",
-                    "default": "\uF594"
+                    "default": "\uf594"
                   },
                   "github_icon": {
                     "type": "string",
-                    "title": "Github Icon",
-                    "description": "Icon/text to display when the upstream is Github",
-                    "default": "\uF408"
+                    "title": "GitHub Icon",
+                    "description": "Icon/text to display when the upstream is GitHub",
+                    "default": "\uf408"
                   },
                   "gitlab_icon": {
                     "type": "string",
-                    "title": "Gitlab Icon",
-                    "description": "Icon/text to display when the upstream is Gitlab",
-                    "default": "\uF296"
+                    "title": "GitLab Icon",
+                    "description": "Icon/text to display when the upstream is GitLab",
+                    "default": "\uf296"
                   },
                   "bitbucket_icon": {
                     "type": "string",
                     "title": "Bitbucket Icon",
                     "description": "Icon/text to display when the upstream is Bitbucket",
-                    "default": "\uF171"
+                    "default": "\uf171"
                   },
                   "azure_devops_icon": {
                     "type": "string",
                     "title": "Azure DevOps Icon",
                     "description": "Icon/text to display when the upstream is Azure DevOps",
-                    "default": "\uEBE8"
+                    "default": "\uebe8"
                   },
                   "codecommit_icon": {
                     "type": "string",
                     "title": "CodeCommit Icon",
                     "description": "Icon/text to display when the upstream is CodeCommit",
-                    "default": "\uF270"
+                    "default": "\uf270"
                   },
                   "codeberg_icon": {
                     "type": "string",
                     "title": "Codeberg Icon",
                     "description": "Icon/text to display when the upstream is Codeberg",
-                    "default": "\uF330"
+                    "default": "\uf330"
                   },
                   "git_icon": {
                     "type": "string",
                     "title": "Git Icon",
                     "description": "Icon/text to display when the upstream is not known/mapped",
-                    "default": "\uE5FB"
+                    "default": "\ue5fb"
+                  },
+                  "upstream_icons": {
+                    "type": "object",
+                    "title": "Status string formats",
+                    "description": "a key, value map representing the remote URL (or a part of that URL) and icon to use in case the upstream URL contains the key. These get precedence over the standard icons",
+                    "default": {}
                   },
                   "untracked_modes": {
                     "type": "object",
@@ -2066,20 +2027,8 @@
                       "type": "string"
                     }
                   },
-                  "fetch_user": {
-                    "type": "boolean",
-                    "title": "Fetch the user",
-                    "description": "Fetch the current configured user for the repository",
-                    "default": false
-                  },
                   "status_formats": {
                     "$ref": "#/definitions/status_formats"
-                  },
-                  "upstream_icons": {
-                    "type": "object",
-                    "title": "Status string formats",
-                    "description": "a key, value map representing the remote URL (or a part of that URL) and icon to use in case the upstream URL contains the key. These get precedence over the standard icons",
-                    "default": {}
                   },
                   "mapped_branches": {
                     "$ref": "#/definitions/mapped_branches"
@@ -2090,7 +2039,8 @@
                   "native_fallback": {
                     "$ref": "#/definitions/native_fallback"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -2120,27 +2070,13 @@
             "title": "Golang Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/golang",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "parse_mod_file": {
                     "type": "boolean",
                     "title": "Parse go.mod file",
@@ -2154,19 +2090,19 @@
                     "default": false
                   },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Go workspace",
                     "default": [
                       "*.go",
-                      "go.mod"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                      "go.mod",
+                      "go.work",
+                      "go.sum",
+                      "go.work.sum"
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "mod",
+                      "go"
+                    ]
                   }
                 }
               }
@@ -2185,27 +2121,13 @@
             "title": "Haskell Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/haskell",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "stack_ghc_mode": {
                     "type": "string",
                     "title": "Use Stack GHC",
@@ -2218,9 +2140,6 @@
                     "default": "never"
                   },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is a Haskell project",
                     "default": [
                       "*.hs",
                       "*.lhs",
@@ -2228,13 +2147,12 @@
                       "package.yaml",
                       "*.cabal",
                       "cabal.project"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "ghc"
+                    ]
                   }
                 }
               }
@@ -2253,12 +2171,18 @@
             "title": "Helm segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/helm",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "display_mode": {
-                    "$ref": "#/definitions/display_mode"
+                    "$ref": "#/definitions/display_mode",
+                    "enum": [
+                      "always",
+                      "files"
+                    ],
+                    "default": "always"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -2275,7 +2199,7 @@
             "title": "HTTP segment",
             "description": "https://ohmyposh.dev/docs/segments/web/http",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "url": {
                     "type": "string",
@@ -2290,9 +2214,11 @@
                     "enum": [
                       "GET",
                       "POST"
-                    ]
+                    ],
+                    "default": "GET"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -2309,7 +2235,7 @@
             "title": "Display your external IP Address",
             "description": "https://ohmyposh.dev/docs/segments/web/ipify",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "url": {
                     "type": "string",
@@ -2319,8 +2245,13 @@
                   },
                   "http_timeout": {
                     "$ref": "#/definitions/http_timeout"
+                  },
+                  "cache_duration": {
+                    "$ref": "#/definitions/cache_duration",
+                    "default": "24h"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -2337,31 +2268,14 @@
             "title": "Java Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/java",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Java workspace",
                     "default": [
                       "pom.xml",
                       "build.gradle.kts",
@@ -2378,8 +2292,10 @@
                       "*.cljc"
                     ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "java"
+                    ]
                   }
                 }
               }
@@ -2398,8 +2314,14 @@
             "title": "Jujutsu Segment",
             "description": "https://ohmyposh.dev/docs/segments/scm/jujutsu",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
+                  "change_id_min_len": {
+                    "type": "integer",
+                    "title": "Change ID Minimum Length",
+                    "description": "Minimum length of the change ID to display",
+                    "default": 0
+                  },
                   "fetch_status": {
                     "type": "boolean",
                     "title": "Display Status",
@@ -2412,13 +2334,26 @@
                     "description": "Don't snapshot the working copy, and don't update it",
                     "default": true
                   },
-                  "status_formats": {
-                    "$ref": "#/definitions/status_formats"
+                  "fetch_ahead_counter": {
+                    "type": "boolean",
+                    "title": "Fetch Ahead Counter",
+                    "description": "Fetch working copy # of changes ahead of the nearest bookmark",
+                    "default": false
+                  },
+                  "ahead_icon": {
+                    "type": "string",
+                    "title": "Ahead icon",
+                    "description": "Icon to separate bookmark name and ahead counter",
+                    "default": "\u21e1"
                   },
                   "native_fallback": {
                     "$ref": "#/definitions/native_fallback"
+                  },
+                  "status_formats": {
+                    "$ref": "#/definitions/status_formats"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -2435,40 +2370,22 @@
             "title": "Julia Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/julia",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Julia workspace",
                     "default": [
                       "*.jl"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "julia"
+                    ]
                   }
                 }
               }
@@ -2487,42 +2404,24 @@
             "title": "Kotlin Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/kotlin",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is a Kotlin project",
                     "default": [
                       "*.kt",
                       "*.kts",
                       "*.ktm"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "kotlin"
+                    ]
                   }
                 }
               }
@@ -2541,7 +2440,7 @@
             "title": "Kubectl Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/kubectl",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "display_error": {
                     "type": "boolean",
@@ -2560,8 +2459,15 @@
                     "title": "Context aliases",
                     "description": "Custom context names.",
                     "default": {}
+                  },
+                  "cluster_aliases": {
+                    "type": "object",
+                    "title": "Cluster aliases",
+                    "description": "Custom cluster names.",
+                    "default": {}
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -2578,19 +2484,19 @@
             "title": "LastFM Segment",
             "description": "https://ohmyposh.dev/docs/segments/music/lastfm",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "playing_icon": {
                     "type": "string",
-                    "title": "User Info Separator",
+                    "title": "Playing Icon",
                     "description": "Text/icon to show when playing",
-                    "default": "\uE602"
+                    "default": "\ue602 "
                   },
                   "stopped_icon": {
                     "type": "string",
-                    "title": "SSH Icon",
+                    "title": "Stopped Icon",
                     "description": "Text/icon to show when stopped",
-                    "default": "\uF04D"
+                    "default": "\uf04d "
                   },
                   "api_key": {
                     "type": "string",
@@ -2607,7 +2513,8 @@
                   "http_timeout": {
                     "$ref": "#/definitions/http_timeout"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -2624,51 +2531,29 @@
             "title": "Lua Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/lua",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
-                  "preferred_executable": {
-                    "type": "string",
-                    "title": "Preferred Executable",
-                    "description": "The preferred executable to use when fetching the version.",
-                    "enum": [
-                      "lua",
-                      "luajit"
-                    ],
-                    "default": "lua"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is a Lua project",
                     "default": [
                       "*.lua",
                       "*.rockspec"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
                   "folders": {
-                    "$ref": "#/definitions/folders"
+                    "default": [
+                      "lua"
+                    ]
+                  },
+                  "tooling": {
+                    "default": [
+                      "lua",
+                      "luajit"
+                    ]
                   }
                 }
               }
@@ -2687,7 +2572,7 @@
             "title": "Mercurial Segment",
             "description": "https://ohmyposh.dev/docs/segments/scm/mercurial",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "fetch_status": {
                     "type": "boolean",
@@ -2701,7 +2586,8 @@
                   "native_fallback": {
                     "$ref": "#/definitions/native_fallback"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -2718,11 +2604,13 @@
             "title": "Mojo Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/mojo",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
                   "fetch_virtual_env": {
                     "type": "boolean",
                     "title": "Fetch Virtual Env",
@@ -2735,41 +2623,68 @@
                     "description": "Show the name of the virtualenv when it's default",
                     "default": true
                   },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Mojo workspace",
                     "default": [
                       "*.🔥",
                       "*.mojo",
                       "mojoproject.toml"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "mojo"
+                    ]
                   }
                 }
               }
             }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "mvn"
+              }
+            }
+          },
+          "then": {
+            "title": "Maven Segment",
+            "description": "https://ohmyposh.dev/docs/segments/cli/mvn",
+            "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
+                "properties": {
+                  "extensions": {
+                    "default": [
+                      "pom.xml"
+                    ]
+                  },
+                  "tooling": {
+                    "default": [
+                      "mvn"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "nbgv"
+              }
+            }
+          },
+          "then": {
+            "title": "Nerdbank.GitVersion Segment",
+            "description": "https://ohmyposh.dev/docs/segments/cli/nbgv"
           }
         },
         {
@@ -2784,7 +2699,7 @@
             "title": "Display Nightscout segment",
             "description": "https://ohmyposh.dev/docs/segments/health/nightscout",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "url": {
                     "type": "string",
@@ -2796,7 +2711,7 @@
                     "type": "integer",
                     "title": "Http request timeout",
                     "description": "Milliseconds to use for http request timeouts",
-                    "default": 500
+                    "default": 20
                   },
                   "headers": {
                     "type": "object",
@@ -2804,7 +2719,117 @@
                     "description": "A key, value map of Headers to send with the request",
                     "default": {}
                   }
-                }
+                },
+                "unevaluatedProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "ramadan"
+              }
+            }
+          },
+          "then": {
+            "title": "Ramadan Segment",
+            "description": "https://ohmyposh.dev/docs/segments/health/ramadan",
+            "properties": {
+              "options": {
+                "properties": {
+                  "latitude": {
+                    "type": "number",
+                    "title": "Latitude",
+                    "description": "Latitude for prayer time calculation",
+                    "default": 0
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "title": "Longitude",
+                    "description": "Longitude for prayer time calculation",
+                    "default": 0
+                  },
+                  "city": {
+                    "type": "string",
+                    "title": "City",
+                    "description": "City name for location lookup (takes precedence over latitude/longitude)",
+                    "default": ""
+                  },
+                  "country": {
+                    "type": "string",
+                    "title": "Country",
+                    "description": "Country name or ISO 3166 alpha-2 code (required when using city)",
+                    "default": ""
+                  },
+                  "method": {
+                    "type": "integer",
+                    "title": "Calculation Method",
+                    "description": "Prayer calculation method ID (0-23). See https://aladhan.com/calculation-methods",
+                    "default": 3
+                  },
+                  "school": {
+                    "type": "integer",
+                    "title": "Madhab School",
+                    "description": "0 = Shafi (standard), 1 = Hanafi",
+                    "default": 0
+                  },
+                  "hide_outside_ramadan": {
+                    "type": "boolean",
+                    "title": "Hide Outside Ramadan",
+                    "description": "Hide the segment when not in Ramadan",
+                    "default": true
+                  },
+                  "first_roza_date": {
+                    "type": "string",
+                    "title": "First Roza Date",
+                    "description": "Override first day of Ramadan as YYYY-MM-DD for local moon sighting",
+                    "default": ""
+                  },
+                  "http_timeout": {
+                    "type": "integer",
+                    "title": "HTTP request timeout",
+                    "description": "Milliseconds to use for HTTP request timeouts",
+                    "default": 20
+                  }
+                },
+                "unevaluatedProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "nba"
+              }
+            }
+          },
+          "then": {
+            "title": "NBA Segment",
+            "description": "https://ohmyposh.dev/docs/segments/web/nba",
+            "properties": {
+              "options": {
+                "properties": {
+                  "team": {
+                    "type": "string",
+                    "title": "Team",
+                    "description": "Tri-code for the NBA team you want to get data for",
+                    "default": ""
+                  },
+                  "days_offset": {
+                    "type": "integer",
+                    "title": "Days Offset",
+                    "description": "How many days in advance you wish to see game information for",
+                    "default": 8
+                  },
+                  "http_timeout": {
+                    "$ref": "#/definitions/http_timeout"
+                  }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -2821,38 +2846,23 @@
             "title": "Nim Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/nim",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Nim workspace",
                     "default": [
                       "*.nim",
                       "*.nims"
                     ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "nim"
+                    ]
                   }
                 }
               }
@@ -2884,49 +2894,44 @@
             "title": "Node Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/node",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "fetch_package_manager": {
                     "type": "boolean",
                     "title": "Fetch Display Package Manager",
                     "description": "Assigns the Yarn or NPM icon to .PackageManagerIcon",
                     "default": false
                   },
+                  "pnpm_icon": {
+                    "type": "string",
+                    "title": "PNPM Icon",
+                    "description": "Icon/text to use for PNPM",
+                    "default": "\ue865"
+                  },
                   "yarn_icon": {
                     "type": "string",
                     "title": "Yarn Icon",
                     "description": "Icon/text to use for Yarn",
-                    "default": "\uF011B"
+                    "default": "\ue6a7"
                   },
                   "npm_icon": {
                     "type": "string",
                     "title": "NPM Icon",
                     "description": "Icon/text to use for NPM",
-                    "default": "\uE71E"
+                    "default": "\ue71e"
+                  },
+                  "bun_icon": {
+                    "type": "string",
+                    "title": "Bun Icon",
+                    "description": "Icon/text to use for Bun",
+                    "default": "\ue76f"
                   },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Node workspace",
                     "default": [
                       "*.js",
                       "*.ts",
@@ -2935,13 +2940,12 @@
                       "pnpm-workspace.yaml",
                       ".pnpmfile.cjs",
                       ".vue"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "node"
+                    ]
                   }
                 }
               }
@@ -2960,37 +2964,23 @@
             "title": "NPM Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/npm",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is an NPM workspace",
                     "default": [
                       "package.json",
                       "package-lock.json"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "npm"
+                    ]
                   }
                 }
               }
@@ -3009,37 +2999,23 @@
             "title": "Nx Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/nx",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is an Nx project",
                     "default": [
                       "workspace.json",
                       "nx.json"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "nx"
+                    ]
                   }
                 }
               }
@@ -3058,44 +3034,26 @@
             "title": "OCaml Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/ocaml",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is an OCaml project",
                     "default": [
                       "*.ml",
                       "*.mli",
                       "dune",
                       "dune-project",
                       "dune-workspace"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "ocaml"
+                    ]
                   }
                 }
               }
@@ -3114,25 +3072,25 @@
             "title": "Operating System Segment",
             "description": "https://ohmyposh.dev/docs/segments/system/os",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "macos": {
                     "type": "string",
                     "title": "MacOS Icon",
                     "description": "Icon/text to use for macOS",
-                    "default": "\uF179"
+                    "default": "\uf179"
                   },
                   "linux": {
                     "type": "string",
                     "title": "Linux Icon",
                     "description": "Icon/text to use for Linux",
-                    "default": "\uF17C"
+                    "default": "\uf17c"
                   },
                   "windows": {
                     "type": "string",
                     "title": "Windows Icon",
                     "description": "Icon/text to use for Windows",
-                    "default": "\uE62A"
+                    "default": "\ue62a"
                   },
                   "display_distro_name": {
                     "type": "boolean",
@@ -3140,193 +3098,206 @@
                     "description": "Display the distro name or icon or not",
                     "default": false
                   },
-                  "alpine": {
-                    "type": "string",
-                    "title": "Alpine Icon",
-                    "description": "The icon to use for Alpine",
-                    "default": "\uF300"
-                  },
-                  "aosc": {
-                    "type": "string",
-                    "title": "Aosc Icon",
-                    "description": "The icon to use for Aosc",
-                    "default": "\uF301"
-                  },
-                  "arch": {
-                    "type": "string",
-                    "title": "Arch Icon",
-                    "description": "The icon to use for Arch",
-                    "default": "\uF303"
-                  },
-                  "centos": {
-                    "type": "string",
-                    "title": "Centos Icon",
-                    "description": "The icon to use for Centos",
-                    "default": "\uF303"
-                  },
-                  "coreos": {
-                    "type": "string",
-                    "title": "Coreos Icon",
-                    "description": "The icon to use for Coreos",
-                    "default": "\uF305"
-                  },
-                  "debian": {
-                    "type": "string",
-                    "title": "Debian Icon",
-                    "description": "The icon to use for Debian",
-                    "default": "\uF306"
-                  },
-                  "deepin": {
-                    "type": "string",
-                    "title": "Deepin Icon",
-                    "description": "The icon to use for Deepin",
-                    "default": "\uF321"
-                  },
-                  "devuan": {
-                    "type": "string",
-                    "title": "Devuan Icon",
-                    "description": "The icon to use for Devuan",
-                    "default": "\uF307"
-                  },
-                  "raspbian": {
-                    "type": "string",
-                    "title": "Raspbian Icon",
-                    "description": "The icon to use for Raspbian",
-                    "default": "\uF315"
-                  },
-                  "elementary": {
-                    "type": "string",
-                    "title": "Elementary Icon",
-                    "description": "The icon to use for Elementary",
-                    "default": "\uF309"
-                  },
-                  "endeavouros": {
-                    "type": "string",
-                    "title": "EndeavourOS Icon",
-                    "description": "The icon to use for EndeavourOS",
-                    "default": "\uF322"
-                  },
-                  "fedora": {
-                    "type": "string",
-                    "title": "Fedora Icon",
-                    "description": "The icon to use for Fedora",
-                    "default": "\uF30a"
-                  },
-                  "freebsd": {
-                    "type": "string",
-                    "title": "FreeBSD Icon",
-                    "description": "The icon to use for FreeBSD",
-                    "default": "\\U000f08e0"
-                  },
-                  "gentoo": {
-                    "type": "string",
-                    "title": "Gentoo Icon",
-                    "description": "The icon to use for Gentoo",
-                    "default": "\uF30d"
-                  },
-                  "kali": {
-                    "type": "string",
-                    "title": "Kali Icon",
-                    "description": "The icon to use for Kali",
-                    "default": "\\uf327"
-                  },
-                  "mageia": {
-                    "type": "string",
-                    "title": "Mageia Icon",
-                    "description": "The icon to use for Mageia",
-                    "default": "\uF310"
-                  },
-                  "manjaro": {
-                    "type": "string",
-                    "title": "Manjaro Icon",
-                    "description": "The icon to use for Manjaro",
-                    "default": "\uF312"
-                  },
-                  "mint": {
-                    "type": "string",
-                    "title": "Mint Icon",
-                    "description": "The icon to use for Mint",
-                    "default": "\uF30e"
-                  },
-                  "neon": {
-                    "type": "string",
-                    "title": "Neon Icon",
-                    "description": "The icon to use for Neon",
-                    "default": "\\uf331"
-                  },
-                  "nixos": {
-                    "type": "string",
-                    "title": "Nixos Icon",
-                    "description": "The icon to use for Nixos",
-                    "default": "\uF313"
-                  },
-                  "opensuse": {
-                    "type": "string",
-                    "title": "Opensuse Icon",
-                    "description": "The icon to use for Opensuse",
-                    "default": "\uF314"
-                  },
-                  "opensuse-tumbleweed": {
-                    "type": "string",
-                    "title": "OpenSUSE Tumbleweed Icon",
-                    "description": "The icon to use for OpenSUSE Tumbleweed",
-                    "default": "\uF314"
-                  },
-                  "redhat": {
-                    "type": "string",
-                    "title": "Redhat Icon",
-                    "description": "The icon to use for Redhat",
-                    "default": "\uF316"
-                  },
-                  "sabayon": {
-                    "type": "string",
-                    "title": "Sabayon Icon",
-                    "description": "The icon to use for Sabayon",
-                    "default": "\uF317"
-                  },
-                  "slackware": {
-                    "type": "string",
-                    "title": "Slackware Icon",
-                    "description": "The icon to use for Slackware",
-                    "default": "\uF319"
-                  },
-                  "ubuntu": {
-                    "type": "string",
-                    "title": "Ubuntu Icon",
-                    "description": "The icon to use for Ubuntu",
-                    "default": "\uF31b"
-                  },
-                  "rocky": {
-                    "type": "string",
-                    "title": "Rocky Icon",
-                    "description": "The icon to use for Rocky",
-                    "default": "\uF32B"
-                  },
                   "alma": {
                     "type": "string",
                     "title": "Alma Icon",
                     "description": "The icon to use for Alma",
-                    "default": "\uF31D"
+                    "default": "\uf31d"
                   },
                   "almalinux": {
                     "type": "string",
                     "title": "AlmaLinux Icon",
                     "description": "The icon to use for AlmaLinux",
-                    "default": "\uF31D"
+                    "default": "\uf31d"
                   },
                   "almalinux9": {
                     "type": "string",
                     "title": "AlmaLinux9 Icon",
                     "description": "The icon to use for AlmaLinux9",
-                    "default": "\uF31D"
+                    "default": "\uf31d"
+                  },
+                  "alpine": {
+                    "type": "string",
+                    "title": "Alpine Icon",
+                    "description": "The icon to use for Alpine",
+                    "default": "\uf300"
                   },
                   "android": {
                     "type": "string",
                     "title": "Android Icon",
                     "description": "The icon to use for Android",
-                    "default": "\\ue70e"
+                    "default": "\ue70e"
+                  },
+                  "aosc": {
+                    "type": "string",
+                    "title": "Aosc Icon",
+                    "description": "The icon to use for Aosc",
+                    "default": "\uf301"
+                  },
+                  "arch": {
+                    "type": "string",
+                    "title": "Arch Icon",
+                    "description": "The icon to use for Arch",
+                    "default": "\uf303"
+                  },
+                  "centos": {
+                    "type": "string",
+                    "title": "Centos Icon",
+                    "description": "The icon to use for Centos",
+                    "default": "\uf304"
+                  },
+                  "coreos": {
+                    "type": "string",
+                    "title": "Coreos Icon",
+                    "description": "The icon to use for Coreos",
+                    "default": "\uf305"
+                  },
+                  "debian": {
+                    "type": "string",
+                    "title": "Debian Icon",
+                    "description": "The icon to use for Debian",
+                    "default": "\uf306"
+                  },
+                  "deepin": {
+                    "type": "string",
+                    "title": "Deepin Icon",
+                    "description": "The icon to use for Deepin",
+                    "default": "\uf321"
+                  },
+                  "devuan": {
+                    "type": "string",
+                    "title": "Devuan Icon",
+                    "description": "The icon to use for Devuan",
+                    "default": "\uf307"
+                  },
+                  "elementary": {
+                    "type": "string",
+                    "title": "Elementary Icon",
+                    "description": "The icon to use for Elementary",
+                    "default": "\uf309"
+                  },
+                  "endeavouros": {
+                    "type": "string",
+                    "title": "EndeavourOS Icon",
+                    "description": "The icon to use for EndeavourOS",
+                    "default": "\uf322"
+                  },
+                  "fedora": {
+                    "type": "string",
+                    "title": "Fedora Icon",
+                    "description": "The icon to use for Fedora",
+                    "default": "\uf30a"
+                  },
+                  "freebsd": {
+                    "type": "string",
+                    "title": "FreeBSD Icon",
+                    "description": "The icon to use for FreeBSD",
+                    "default": "\udb82\udce0"
+                  },
+                  "gentoo": {
+                    "type": "string",
+                    "title": "Gentoo Icon",
+                    "description": "The icon to use for Gentoo",
+                    "default": "\uf30d"
+                  },
+                  "kali": {
+                    "type": "string",
+                    "title": "Kali Icon",
+                    "description": "The icon to use for Kali",
+                    "default": "\uf327"
+                  },
+                  "mageia": {
+                    "type": "string",
+                    "title": "Mageia Icon",
+                    "description": "The icon to use for Mageia",
+                    "default": "\uf310"
+                  },
+                  "manjaro": {
+                    "type": "string",
+                    "title": "Manjaro Icon",
+                    "description": "The icon to use for Manjaro",
+                    "default": "\uf312"
+                  },
+                  "mint": {
+                    "type": "string",
+                    "title": "Mint Icon",
+                    "description": "The icon to use for Mint",
+                    "default": "\udb82\udced"
+                  },
+                  "neon": {
+                    "type": "string",
+                    "title": "Neon Icon",
+                    "description": "The icon to use for Neon",
+                    "default": "\uf331"
+                  },
+                  "nixos": {
+                    "type": "string",
+                    "title": "Nixos Icon",
+                    "description": "The icon to use for Nixos",
+                    "default": "\uf313"
+                  },
+                  "opensuse": {
+                    "type": "string",
+                    "title": "Opensuse Icon",
+                    "description": "The icon to use for Opensuse",
+                    "default": "\uf314"
+                  },
+                  "opensuse-tumbleweed": {
+                    "type": "string",
+                    "title": "OpenSUSE Tumbleweed Icon",
+                    "description": "The icon to use for OpenSUSE Tumbleweed",
+                    "default": "\uf314"
+                  },
+                  "raspbian": {
+                    "type": "string",
+                    "title": "Raspbian Icon",
+                    "description": "The icon to use for Raspbian",
+                    "default": "\uf315"
+                  },
+                  "redhat": {
+                    "type": "string",
+                    "title": "Redhat Icon",
+                    "description": "The icon to use for Redhat",
+                    "default": "\uf316"
+                  },
+                  "rocky": {
+                    "type": "string",
+                    "title": "Rocky Icon",
+                    "description": "The icon to use for Rocky",
+                    "default": "\uf32b"
+                  },
+                  "sabayon": {
+                    "type": "string",
+                    "title": "Sabayon Icon",
+                    "description": "The icon to use for Sabayon",
+                    "default": "\uf317"
+                  },
+                  "slackware": {
+                    "type": "string",
+                    "title": "Slackware Icon",
+                    "description": "The icon to use for Slackware",
+                    "default": "\uf319"
+                  },
+                  "ubuntu": {
+                    "type": "string",
+                    "title": "Ubuntu Icon",
+                    "description": "The icon to use for Ubuntu",
+                    "default": "\uf31b"
+                  },
+                  "void": {
+                    "type": "string",
+                    "title": "Void Icon",
+                    "description": "The icon to use for Void",
+                    "default": "\uf32e"
+                  },
+                  "zorin": {
+                    "type": "string",
+                    "title": "Zorin Icon",
+                    "description": "The icon to use for Zorin OS",
+                    "default": "\uf32f"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -3341,9 +3312,9 @@
           },
           "then": {
             "title": "Open Weather Map Segment",
-            "description": "Displays the current weather from the Open Weather Map system",
+            "description": "https://ohmyposh.dev/docs/segments/web/owm",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "api_key": {
                     "type": "string",
@@ -3371,7 +3342,8 @@
                   "http_timeout": {
                     "$ref": "#/definitions/http_timeout"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -3388,7 +3360,7 @@
             "title": "Path Segment",
             "description": "https://ohmyposh.dev/docs/segments/system/path",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "folder_separator_icon": {
                     "type": "string",
@@ -3418,7 +3390,7 @@
                     "type": "string",
                     "title": "Windows Registry Icon",
                     "description": "The icon to display when in the Windows registry",
-                    "default": "\uF013"
+                    "default": "\uf013"
                   },
                   "style": {
                     "type": "string",
@@ -3446,6 +3418,12 @@
                     "description": "Custom glyph/text for specific paths",
                     "default": {}
                   },
+                  "mapped_locations_enabled": {
+                    "type": "boolean",
+                    "title": "Enable the Mapped Locations feature",
+                    "description": "Replace known locations in the path with the replacements before applying the style.",
+                    "default": true
+                  },
                   "max_depth": {
                     "type": "integer",
                     "title": "Maximum Depth",
@@ -3460,12 +3438,6 @@
                     "title": "Maximum Width",
                     "description": "Maximum path width to display for powerlevel style",
                     "default": 0
-                  },
-                  "mapped_locations_enabled": {
-                    "type": "boolean",
-                    "title": "Enable the Mapped Locations feature",
-                    "description": "Replace known locations in the path with the replacements before applying the style.",
-                    "default": true
                   },
                   "mixed_threshold": {
                     "type": "integer",
@@ -3528,6 +3500,12 @@
                     "description": "Display the Cygwin (Linux) style path using cygpath -u $PWD.",
                     "default": false
                   },
+                  "display_root": {
+                    "type": "boolean",
+                    "title": "Display the root directory (/) on Unix systems",
+                    "description": "Display the root directory (/) on Unix systems.",
+                    "default": false
+                  },
                   "dir_length": {
                     "type": "integer",
                     "title": "Directory Length",
@@ -3540,7 +3518,8 @@
                     "description": "Indicates how many full length directory names should be displayed in fish style.",
                     "default": 1
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -3557,43 +3536,25 @@
             "title": "Perl Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/perl",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Perl workspace",
                     "default": [
                       ".perl-version",
                       "*.pl",
                       "*.pm",
                       "*.t"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "perl"
+                    ]
                   }
                 }
               }
@@ -3612,43 +3573,26 @@
             "title": "PHP Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/php",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a PHP workspace",
                     "default": [
                       "*.php",
                       "composer.json",
                       "composer.lock",
-                      ".php-version"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                      ".php-version",
+                      "blade.php"
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "php"
+                    ]
                   }
                 }
               }
@@ -3667,7 +3611,7 @@
             "title": "Plastic SCM Segment",
             "description": "https://ohmyposh.dev/docs/segments/scm/plastic",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "fetch_status": {
                     "type": "boolean",
@@ -3682,19 +3626,19 @@
                     "type": "string",
                     "title": "Branch Icon",
                     "description": "The icon to use in front of the selector branch name",
-                    "default": "\uE0A0 "
+                    "default": "\ue0a0 "
                   },
                   "commit_icon": {
                     "type": "string",
                     "title": "Commit Icon",
                     "description": "Icon/text to display before the selector changeset",
-                    "default": "\uF417"
+                    "default": "\uf417"
                   },
                   "tag_icon": {
                     "type": "string",
                     "title": "Tag Icon",
                     "description": "Icon/text to display before the seletor label",
-                    "default": "\uF412"
+                    "default": "\uf412"
                   },
                   "branch_template": {
                     "$ref": "#/definitions/branch_template"
@@ -3705,7 +3649,8 @@
                   "mapped_branches": {
                     "$ref": "#/definitions/mapped_branches"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -3722,37 +3667,23 @@
             "title": "PNPM Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/pnpm",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is an PNPM workspace",
                     "default": [
                       "package.json",
                       "pnpm-lock.yaml"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "pnpm"
+                    ]
                   }
                 }
               }
@@ -3802,7 +3733,7 @@
             "title": "Project Segment",
             "description": "https://ohmyposh.dev/docs/segments/system/project",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "always_enabled": {
                     "type": "boolean",
@@ -3827,7 +3758,7 @@
             "title": "Pulumi Segment",
             "description": "https://ohmyposh.dev/docs/segments/cloud/pulumi",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "fetch_stack": {
                     "type": "boolean",
@@ -3841,7 +3772,8 @@
                     "description": "Fetch the URL and user for the current stack",
                     "default": false
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -3858,11 +3790,13 @@
             "title": "Python Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/python",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
                   "fetch_virtual_env": {
                     "type": "boolean",
                     "title": "Fetch Virtual Env",
@@ -3875,50 +3809,30 @@
                     "description": "Show the name of the virtualenv when it's default",
                     "default": true
                   },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Python workspace",
                     "default": [
                       "*.py",
                       "*.ipynb",
                       "pyproject.toml",
                       "venv.bak"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
                   "folders": {
-                    "type": "array",
-                    "title": "Folders",
-                    "description": "The folders to look for when determining if a folder is a Python workspace",
                     "default": [
                       ".venv",
                       "venv",
                       "virtualenv",
                       "venv-win",
                       "pyenv-win"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
+                  },
+                  "tooling": {
+                    "default": [
+                      "pyenv",
+                      "python",
+                      "python3",
+                      "py"
+                    ]
                   },
                   "folder_name_fallback": {
                     "type": "boolean",
@@ -3955,40 +3869,29 @@
             "title": "Quasar Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/quasar",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "fetch_dependencies": {
                     "type": "boolean",
                     "title": "Fetch Dependencies",
                     "description": "Fetch the vite and @quasar/app-vite dependency information or not",
-                    "default": true
+                    "default": false
                   },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Quasar workspace",
                     "default": [
                       "quasar.config",
                       "quasar.config.js"
                     ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "quasar"
+                    ]
                   }
                 }
               }
@@ -4007,31 +3910,14 @@
             "title": "R Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/r",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is an R project",
                     "default": [
                       "*.R",
                       "*.Rmd",
@@ -4040,13 +3926,14 @@
                       "*.Rd",
                       "*.Rproj",
                       ".Rproj.user"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "Rscript",
+                      "R",
+                      "R.exe"
+                    ]
                   }
                 }
               }
@@ -4065,36 +3952,22 @@
             "title": "React Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/react",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is a React project",
                     "default": [
                       "package.json"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "react"
+                    ]
                   }
                 }
               }
@@ -4126,39 +3999,28 @@
             "title": "Ruby Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/ruby",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Ruby workspace",
                     "default": [
                       "*.rb",
                       "Rakefile",
                       "Gemfile"
                     ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "rbenv",
+                      "rvm-prompt",
+                      "chruby",
+                      "asdf",
+                      "ruby"
+                    ]
                   }
                 }
               }
@@ -4177,39 +4039,24 @@
             "title": "Rust Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/rust",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a Rust workspace",
                     "default": [
                       "*.rs",
                       "Cargo.toml",
                       "Cargo.lock"
                     ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "rustc"
+                    ]
                   }
                 }
               }
@@ -4228,7 +4075,7 @@
             "title": "Sapling Segment",
             "description": "https://ohmyposh.dev/docs/segments/scm/sapling",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "fetch_status": {
                     "type": "boolean",
@@ -4242,7 +4089,8 @@
                   "native_fallback": {
                     "$ref": "#/definitions/native_fallback"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -4257,19 +4105,7 @@
           },
           "then": {
             "title": "Session Segment",
-            "description": "https://ohmyposh.dev/docs/segments/system/session",
-            "properties": {
-              "properties": {
-                "properties": {
-                  "ssh_icon": {
-                    "type": "string",
-                    "title": "SSH Icon",
-                    "description": "Text/icon to display first when in an active SSH session",
-                    "default": "\uF817"
-                  }
-                }
-              }
-            }
+            "description": "https://ohmyposh.dev/docs/segments/system/session"
           }
         },
         {
@@ -4284,15 +4120,23 @@
             "title": "Shell Segment",
             "description": "https://ohmyposh.dev/docs/segments/system/shell",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
-                  "custom_text": {
+                  "mapped_shell_names": {
                     "type": "object",
-                    "title": "Custom Text",
-                    "description": "Custom glyph/text for specific shells",
-                    "default": {}
+                    "description": "Mapping of shell identifiers to the glyph/string used for that shell (e.g. bash, zsh, pwsh).",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "example": {
+                      "bash": "\udb84\udd83",
+                      "zsh": "",
+                      "pwsh": "",
+                      "shell": "$"
+                    }
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -4309,7 +4153,7 @@
             "title": "Sitecore Segment",
             "description": "https://ohmyposh.dev/docs/segments/cloud/sitecore",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "display_default": {
                     "type": "boolean",
@@ -4317,7 +4161,8 @@
                     "description": "Display the segment or not when the Sitecore environment name matches `default`",
                     "default": true
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -4334,27 +4179,28 @@
             "title": "Spotify Segment",
             "description": "https://ohmyposh.dev/docs/segments/music/spotify",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "playing_icon": {
                     "type": "string",
                     "title": "Playing Icon",
                     "description": "Text/icon to show when playing",
-                    "default": "\uE602"
+                    "default": "\ue602 "
                   },
                   "paused_icon": {
                     "type": "string",
                     "title": "Paused Icon",
                     "description": "Text/icon to show when paused",
-                    "default": "\uF8E3"
+                    "default": "\uf04c "
                   },
                   "stopped_icon": {
                     "type": "string",
                     "title": "Stopped Icon",
                     "description": "Text/icon to show when stopped",
-                    "default": "\uF04D"
+                    "default": "\uf04d "
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -4371,7 +4217,7 @@
             "title": "Status Segment",
             "description": "https://ohmyposh.dev/docs/segments/system/status",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "always_enabled": {
                     "type": "boolean",
@@ -4383,7 +4229,7 @@
                     "type": "string",
                     "title": "Status Template",
                     "description": "The template to use for the status segment",
-                    "default": "|"
+                    "default": "{{ .Code }}"
                   },
                   "status_separator": {
                     "type": "string",
@@ -4391,7 +4237,8 @@
                     "description": "The separator to use between the status segments",
                     "default": "|"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -4408,14 +4255,8 @@
             "title": "Display training data from Strava",
             "description": "https://ohmyposh.dev/docs/segments/health/strava",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
-                  "url": {
-                    "type": "string",
-                    "title": "URL of API with Strava data",
-                    "description": "Url of your api provinding a Strava activity",
-                    "default": ""
-                  },
                   "ride_icon": {
                     "type": "string",
                     "title": "Ride icon",
@@ -4458,7 +4299,8 @@
                   "expires_in": {
                     "$ref": "#/definitions/expires_in"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -4475,40 +4317,22 @@
             "title": "Svelte Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/svelte",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is a Svelte project",
                     "default": [
-                      "package.json"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                      "svelte.config.js"
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "svelte"
+                    ]
                   }
                 }
               }
@@ -4527,13 +4351,13 @@
             "title": "SVN Segment",
             "description": "https://ohmyposh.dev/docs/segments/scm/svn",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "fetch_status": {
                     "type": "boolean",
                     "title": "Display Status",
                     "description": "Display the local changes or not",
-                    "default": true
+                    "default": false
                   },
                   "status_formats": {
                     "$ref": "#/definitions/status_formats"
@@ -4541,7 +4365,8 @@
                   "native_fallback": {
                     "$ref": "#/definitions/native_fallback"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -4558,41 +4383,24 @@
             "title": "Swift Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/swift",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is a Swift project",
                     "default": [
                       "*.swift",
-                      "*.SWIFT"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                      "*.SWIFT",
+                      "Podfile"
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "swift"
+                    ]
                   }
                 }
               }
@@ -4611,7 +4419,7 @@
             "title": "Get sysinfo",
             "description": "https://ohmyposh.dev/docs/segments/system/sysinfo",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "precision": {
                     "type": "integer",
@@ -4619,7 +4427,8 @@
                     "description": "number of decimal places to show",
                     "default": 2
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -4649,42 +4458,69 @@
             "title": "Tauri Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/tauri",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is a Tauri project",
                     "default": [
-                      "package.json"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                      "tauri.conf.json"
+                    ]
                   },
                   "folders": {
-                    "$ref": "#/definitions/folders"
+                    "default": [
+                      "src-tauri"
+                    ]
+                  },
+                  "tooling": {
+                    "default": [
+                      "tauri"
+                    ]
                   }
                 }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "taskwarrior"
+              }
+            }
+          },
+          "then": {
+            "title": "Taskwarrior Segment",
+            "description": "https://ohmyposh.dev/docs/segments/cli/taskwarrior",
+            "properties": {
+              "options": {
+                "properties": {
+                  "command": {
+                    "type": "string",
+                    "title": "Taskwarrior Command",
+                    "description": "The taskwarrior command to use",
+                    "default": "task"
+                  },
+                  "commands": {
+                    "type": "object",
+                    "title": "Commands",
+                    "description": "Map of name to Taskwarrior arguments; the trimmed stdout of each invocation is exposed as .Commands.<Name> in the template",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "default": {
+                      "due": "+PENDING due.before:tomorrow count",
+                      "scheduled": "+PENDING scheduled.before:tomorrow count",
+                      "waiting": "+WAITING count",
+                      "context": "_get rc.context"
+                    }
+                  }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -4701,15 +4537,22 @@
             "title": "Terraform Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/terraform",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
+                  "command": {
+                    "type": "string",
+                    "title": "Terraform Command",
+                    "description": "The terraform command to use",
+                    "default": "terraform"
+                  },
                   "fetch_version": {
                     "type": "boolean",
                     "title": "Fetch Version",
                     "description": "Fetch the version number",
                     "default": false
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -4739,13 +4582,42 @@
             "title": "Time Segment",
             "description": "https://ohmyposh.dev/docs/segments/system/time",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "time_format": {
                     "type": "string",
                     "title": "Time Format",
                     "description": "Format to use, follows the golang standard: https://gobyexample.com/time-formatting-parsing",
                     "default": "15:04:05"
+                  }
+                },
+                "unevaluatedProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "todoist"
+              }
+            }
+          },
+          "then": {
+            "title": "Todoist Segment",
+            "description": "https://ohmyposh.dev/docs/segments/web/todoist",
+            "properties": {
+              "options": {
+                "properties": {
+                  "api_key": {
+                    "type": "string",
+                    "title": "API Key",
+                    "description": "API Key (Required)",
+                    "default": "."
+                  },
+                  "http_timeout": {
+                    "$ref": "#/definitions/http_timeout"
                   }
                 }
               }
@@ -4764,36 +4636,22 @@
             "title": "UI5 tooling CLI segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/ui5tooling",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is a UI5 project",
                     "default": [
                       "*ui5*.y*ml"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "ui5"
+                    ]
                   }
                 }
               }
@@ -4825,12 +4683,13 @@
             "title": "Unity Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/unity",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "http_timeout": {
                     "$ref": "#/definitions/http_timeout"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -4847,13 +4706,14 @@
             "title": "Upgrade Segment",
             "description": "https://ohmyposh.dev/docs/segments/system/upgrade",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "cache_duration": {
                     "$ref": "#/definitions/cache_duration",
-                    "default": "none"
+                    "default": "168h"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -4870,40 +4730,22 @@
             "title": "V Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/v",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is a V project",
                     "default": [
                       "*.v"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "v"
+                    ]
                   }
                 }
               }
@@ -4922,40 +4764,22 @@
             "title": "Vala Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/vala",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is a Vala project",
                     "default": [
                       "*.vala"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "vala"
+                    ]
                   }
                 }
               }
@@ -4972,22 +4796,36 @@
           },
           "then": {
             "title": "Wakatime",
-            "description": "Displays the tracked time on wakatime.com",
+            "description": "https://ohmyposh.dev/docs/segments/web/wakatime",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
-                  "apikey": {
+                  "url": {
                     "type": "string",
-                    "title": "apikey",
-                    "description": "The apikey used for the api call (Required)",
+                    "title": "URL",
+                    "description": "The url used for the api call (Required)",
                     "default": "."
                   },
                   "http_timeout": {
                     "$ref": "#/definitions/http_timeout"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "winget"
+              }
+            }
+          },
+          "then": {
+            "title": "WinGet",
+            "description": "https://ohmyposh.dev/docs/segments/system/winget"
           }
         },
         {
@@ -5002,7 +4840,7 @@
             "title": "Windows Registry Query",
             "description": "https://ohmyposh.dev/docs/segments/system/winreg",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "path": {
                     "type": "string",
@@ -5016,7 +4854,8 @@
                     "description": "Value to display if registry value cannot be retrieved",
                     "default": ""
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -5033,7 +4872,7 @@
             "title": "Display activity data from Withings",
             "description": "https://ohmyposh.dev/docs/segments/health/withings",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "http_timeout": {
                     "$ref": "#/definitions/http_timeout"
@@ -5047,7 +4886,8 @@
                   "expires_in": {
                     "$ref": "#/definitions/expires_in"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -5064,36 +4904,22 @@
             "title": "XMake Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/xmake",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is a XMake workspace",
                     "default": [
                       "xmake.lua"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "xmake"
+                    ]
                   }
                 }
               }
@@ -5112,37 +4938,23 @@
             "title": "Yarn Segment",
             "description": "https://ohmyposh.dev/docs/segments/cli/yarn",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if a folder is an Yarn workspace",
                     "default": [
                       "package.json",
                       "yarn.lock"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "yarn"
+                    ]
                   }
                 }
               }
@@ -5161,36 +4973,37 @@
             "title": "YouTube Music Desktop App Segment",
             "description": "https://ohmyposh.dev/docs/segments/music/ytm",
             "properties": {
-              "properties": {
+              "options": {
                 "properties": {
                   "playing_icon": {
                     "type": "string",
                     "title": "Playing Icon",
                     "description": "Text/icon to show when playing",
-                    "default": "\uE602 "
+                    "default": "\uf04b "
                   },
                   "paused_icon": {
                     "type": "string",
                     "title": "Paused Icon",
                     "description": "Text/icon to show when paused",
-                    "default": "\uF8E3 "
+                    "default": "\uf04c "
                   },
                   "stopped_icon": {
                     "type": "string",
                     "title": "Stopped Icon",
                     "description": "Text/icon to show when stopped",
-                    "default": "\uF04D "
+                    "default": "\uf04d "
                   },
-                  "api_url": {
+                  "ad_icon": {
                     "type": "string",
-                    "title": "API URL",
-                    "description": "The YTMDA Remote Control API URL",
-                    "default": "http://127.0.0.1:9863"
+                    "title": "Advertisement Icon",
+                    "description": "Text/icon to show when an advertisement is playing",
+                    "default": "\ueebb "
                   },
                   "http_timeout": {
                     "$ref": "#/definitions/http_timeout"
                   }
-                }
+                },
+                "unevaluatedProperties": false
               }
             }
           }
@@ -5207,41 +5020,23 @@
             "title": "Zig Segment",
             "description": "https://ohmyposh.dev/docs/segments/languages/zig",
             "properties": {
-              "properties": {
+              "options": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/language_options"
+                  }
+                ],
                 "properties": {
-                  "home_enabled": {
-                    "$ref": "#/definitions/home_enabled"
-                  },
-                  "fetch_version": {
-                    "$ref": "#/definitions/fetch_version"
-                  },
-                  "cache_duration": {
-                    "$ref": "#/definitions/cache_duration",
-                    "default": "none"
-                  },
-                  "display_mode": {
-                    "$ref": "#/definitions/display_mode"
-                  },
-                  "missing_command_text": {
-                    "$ref": "#/definitions/missing_command_text"
-                  },
-                  "version_url_template": {
-                    "$ref": "#/definitions/version_url_template"
-                  },
                   "extensions": {
-                    "type": "array",
-                    "title": "Extensions",
-                    "description": "The extensions to look for when determining if the current directory is an zig project",
                     "default": [
                       "*.zig",
                       "*.zon"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
+                    ]
                   },
-                  "folders": {
-                    "$ref": "#/definitions/folders"
+                  "tooling": {
+                    "default": [
+                      "zig"
+                    ]
                   }
                 }
               }
@@ -5323,6 +5118,12 @@
     },
     "terminal_background": {
       "$ref": "#/definitions/color"
+    },
+    "streaming": {
+      "type": "integer",
+      "title": "Streaming Mode",
+      "description": "https://ohmyposh.dev/docs/experimental/streaming",
+      "default": 100
     },
     "blocks": {
       "type": "array",
@@ -5507,7 +5308,7 @@
       "type": "integer",
       "title": "Version",
       "description": "https://ohmyposh.dev/docs/configuration/general",
-      "default": 3
+      "default": 4
     },
     "extends": {
       "type": "string",

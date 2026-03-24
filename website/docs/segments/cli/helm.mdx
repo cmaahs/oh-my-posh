@@ -6,7 +6,7 @@ sidebar_label: Helm
 
 ## What
 
-Display the version of helm
+Display the version of [Helm][helm]
 
 ## Sample Configuration
 
@@ -16,12 +16,12 @@ import Config from '@site/src/components/Config.js';
   "background": "#a7cae1",
   "foreground": "#100e23",
   "powerline_symbol": "\ue0b0",
-  "template": " Helm {{ .Version }}",
+  "template": " \ue7fb {{ .Version }}",
   "style": "powerline",
   "type": "helm"
 }}/>
 
-## Properties
+## Options
 
 | Name           | Type     | Default  | Description                                                                                                                                                      |
 | -------------- | :------: | :------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -44,3 +44,4 @@ import Config from '@site/src/components/Config.js';
 | `.Version`   | `string` | Helm cli version           |
 
 [templates]: /docs/configuration/templates
+[helm]: https://helm.sh/

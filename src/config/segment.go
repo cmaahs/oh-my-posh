@@ -10,11 +10,13 @@ import (
 	"github.com/jandedobbeleer/oh-my-posh/src/cache"
 	"github.com/jandedobbeleer/oh-my-posh/src/color"
 	"github.com/jandedobbeleer/oh-my-posh/src/log"
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/regex"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime"
+	runjobs "github.com/jandedobbeleer/oh-my-posh/src/runtime/jobs"
+	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
 	"github.com/jandedobbeleer/oh-my-posh/src/template"
 
+	"go.yaml.in/yaml/v3"
 	c "golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -36,9 +38,10 @@ func (s *SegmentStyle) resolve(context any) SegmentStyle {
 type Segment struct {
 	writer                 SegmentWriter
 	env                    runtime.Environment
-	Properties             properties.Map `json:"properties,omitempty" toml:"properties,omitempty" yaml:"properties,omitempty"`
-	Cache                  *Cache         `json:"cache,omitempty" toml:"cache,omitempty" yaml:"cache,omitempty"`
-	Alias                  string         `json:"alias,omitempty" toml:"alias,omitempty" yaml:"alias,omitempty"`
+	Options                options.Map `json:"options,omitempty" toml:"options,omitempty" yaml:"options,omitempty"`
+	Properties             options.Map `json:"-" toml:"properties,omitempty" yaml:"-"`
+	Cache                  *Cache      `json:"cache,omitempty" toml:"cache,omitempty" yaml:"cache,omitempty"`
+	Alias                  string      `json:"alias,omitempty" toml:"alias,omitempty" yaml:"alias,omitempty"`
 	styleCache             SegmentStyle
 	name                   string
 	LeadingDiamond         string         `json:"leading_diamond,omitempty" toml:"leading_diamond,omitempty" yaml:"leading_diamond,omitempty"`
@@ -52,26 +55,87 @@ type Segment struct {
 	Type                   SegmentType    `json:"type,omitempty" toml:"type,omitempty" yaml:"type,omitempty"`
 	Style                  SegmentStyle   `json:"style,omitempty" toml:"style,omitempty" yaml:"style,omitempty"`
 	LeadingPowerlineSymbol string         `json:"leading_powerline_symbol,omitempty" toml:"leading_powerline_symbol,omitempty" yaml:"leading_powerline_symbol,omitempty"`
-	ForegroundTemplates    template.List  `json:"foreground_templates,omitempty" toml:"foreground_templates,omitempty" yaml:"foreground_templates,omitempty"`
+	Placeholder            string         `json:"placeholder,omitempty" toml:"placeholder,omitempty" yaml:"placeholder,omitempty"`
 	Tips                   []string       `json:"tips,omitempty" toml:"tips,omitempty" yaml:"tips,omitempty"`
 	BackgroundTemplates    template.List  `json:"background_templates,omitempty" toml:"background_templates,omitempty" yaml:"background_templates,omitempty"`
 	Templates              template.List  `json:"templates,omitempty" toml:"templates,omitempty" yaml:"templates,omitempty"`
 	ExcludeFolders         []string       `json:"exclude_folders,omitempty" toml:"exclude_folders,omitempty" yaml:"exclude_folders,omitempty"`
 	IncludeFolders         []string       `json:"include_folders,omitempty" toml:"include_folders,omitempty" yaml:"include_folders,omitempty"`
 	Needs                  []string       `json:"-" toml:"-" yaml:"-"`
-	Timeout                time.Duration  `json:"timeout,omitempty" toml:"timeout,omitempty" yaml:"timeout,omitempty"`
-	MaxWidth               int            `json:"max_width,omitempty" toml:"max_width,omitempty" yaml:"max_width,omitempty"`
+	ForegroundTemplates    template.List  `json:"foreground_templates,omitempty" toml:"foreground_templates,omitempty" yaml:"foreground_templates,omitempty"`
+	Index                  int            `json:"index,omitempty" toml:"index,omitempty" yaml:"index,omitempty"`
 	MinWidth               int            `json:"min_width,omitempty" toml:"min_width,omitempty" yaml:"min_width,omitempty"`
 	Duration               time.Duration  `json:"-" toml:"-" yaml:"-"`
 	NameLength             int            `json:"-" toml:"-" yaml:"-"`
-	Index                  int            `json:"index,omitempty" toml:"index,omitempty" yaml:"index,omitempty"`
-	Interactive            bool           `json:"interactive,omitempty" toml:"interactive,omitempty" yaml:"interactive,omitempty"`
-	Enabled                bool           `json:"-" toml:"-" yaml:"-"`
+	MaxWidth               int            `json:"max_width,omitempty" toml:"max_width,omitempty" yaml:"max_width,omitempty"`
+	Timeout                int            `json:"timeout,omitempty" toml:"timeout,omitempty" yaml:"timeout,omitempty"`
 	Newline                bool           `json:"newline,omitempty" toml:"newline,omitempty" yaml:"newline,omitempty"`
+	Enabled                bool           `json:"-" toml:"-" yaml:"-"`
 	InvertPowerline        bool           `json:"invert_powerline,omitempty" toml:"invert_powerline,omitempty" yaml:"invert_powerline,omitempty"`
 	Force                  bool           `json:"force,omitempty" toml:"force,omitempty" yaml:"force,omitempty"`
 	restored               bool           `json:"-" toml:"-" yaml:"-"`
 	Toggled                bool           `json:"toggled,omitempty" toml:"toggled,omitempty" yaml:"toggled,omitempty"`
+	Pending                bool           `json:"-" toml:"-" yaml:"-"`
+	Interactive            bool           `json:"interactive,omitempty" toml:"interactive,omitempty" yaml:"interactive,omitempty"`
+}
+
+// segmentAlias is used to avoid recursion during unmarshaling
+type segmentAlias Segment
+
+// segmentAux is a helper struct that captures the legacy 'properties' field
+type segmentAux struct {
+	Properties options.Map `json:"properties,omitempty" yaml:"properties,omitempty" toml:"properties,omitempty"`
+	*segmentAlias
+}
+
+func (segment *Segment) UnmarshalJSON(data []byte) error {
+	aux := &segmentAux{
+		segmentAlias: (*segmentAlias)(segment),
+	}
+
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+
+	// Migrate 'properties' to 'options' if present
+	if len(aux.Properties) > 0 && len(segment.Options) == 0 {
+		segment.Options = aux.Properties
+	}
+
+	return nil
+}
+
+func (segment *Segment) UnmarshalYAML(node *yaml.Node) error {
+	// Decode into a map to handle field renaming
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+
+	// If 'properties' exists and 'options' doesn't, rename it
+	if props, hasProps := raw["properties"]; hasProps {
+		if _, hasOptions := raw["options"]; !hasOptions {
+			raw["options"] = props
+			delete(raw, "properties")
+		}
+	}
+
+	// Re-encode and decode into the struct
+	modifiedNode := &yaml.Node{}
+	if err := modifiedNode.Encode(raw); err != nil {
+		return err
+	}
+
+	return modifiedNode.Decode((*segmentAlias)(segment))
+}
+
+// MigratePropertiesToOptions migrates the deprecated Properties field to Options.
+// This is needed for TOML configs since go-toml/v2 doesn't support custom unmarshalers.
+func (segment *Segment) MigratePropertiesToOptions() {
+	if len(segment.Properties) > 0 && len(segment.Options) == 0 {
+		segment.Options = segment.Properties
+		segment.Properties = nil
+	}
 }
 
 func (segment *Segment) Name() string {
@@ -112,7 +176,8 @@ func (segment *Segment) Execute(env runtime.Environment) {
 		return
 	}
 
-	if segment.restoreCache() {
+	cacheRestored := segment.restoreCache()
+	if cacheRestored && !env.Flags().Streaming {
 		return
 	}
 
@@ -120,31 +185,23 @@ func (segment *Segment) Execute(env runtime.Environment) {
 		return
 	}
 
-	if segment.Timeout == 0 {
-		segment.Enabled = segment.writer.Enabled()
-	} else {
-		done := make(chan bool)
-		go func() {
-			segment.Enabled = segment.writer.Enabled()
-			done <- true
-		}()
-
-		select {
-		case <-done:
-			// Completed before timeout
-		case <-time.After(segment.Timeout * time.Millisecond):
-			log.Debugf("timeout after %dms for segment: %s", segment.Timeout, segment.Name())
-			return
+	defer func() {
+		if segment.Enabled {
+			template.Cache.AddSegmentData(segment.Name(), segment.writer)
 		}
+	}()
+
+	// Create Job for this goroutine so child processes can be tracked and killed on timeout
+	if err := runjobs.CreateJobForGoroutine(segment.Name()); err != nil {
+		log.Errorf("failed to create job for goroutine (segment: %s): %v", segment.Name(), err)
 	}
 
-	if segment.Enabled {
-		template.Cache.AddSegmentData(segment.Name(), segment.writer)
-	}
+	segment.Enabled = segment.writer.Enabled()
 }
 
 func (segment *Segment) Render(index int, force bool) bool {
-	if !segment.Enabled && !force {
+	// Allow pending segments to render (they'll show "..." text)
+	if !segment.Pending && !segment.Enabled && !force {
 		return false
 	}
 
@@ -155,11 +212,15 @@ func (segment *Segment) Render(index int, force bool) bool {
 	segment.writer.SetIndex(index)
 
 	text := segment.string()
-	segment.Enabled = segment.Force || len(strings.ReplaceAll(text, " ", "")) > 0
 
-	if !segment.Enabled {
-		template.Cache.RemoveSegmentData(segment.Name())
-		return false
+	// Only update Enabled if segment is NOT pending (avoid race with Execute goroutine)
+	if !segment.Pending {
+		segment.Enabled = segment.Force || len(strings.ReplaceAll(text, " ", "")) > 0
+
+		if !segment.Enabled {
+			template.Cache.RemoveSegmentData(segment.Name())
+			return false
+		}
 	}
 
 	segment.SetText(text)
@@ -249,10 +310,10 @@ func (segment *Segment) restoreCache() bool {
 		return false
 	}
 
-	cacheKey := segment.cacheKey()
-	data, OK := cache.Get[string](cache.Session, cacheKey)
+	key, store := segment.cacheKeyAndStore()
+	data, OK := cache.Get[string](store, key)
 	if !OK {
-		log.Debugf("no cache found for segment: %s, key: %s", segment.Name(), cacheKey)
+		log.Debugf("no cache found for segment: %s, key: %s", segment.Name(), key)
 		return false
 	}
 
@@ -276,6 +337,11 @@ func (segment *Segment) setCache() {
 		return
 	}
 
+	// Never cache pending state to avoid polluting cache with incomplete data
+	if segment.Pending {
+		return
+	}
+
 	data, err := json.Marshal(segment.writer)
 	if err != nil {
 		log.Error(err)
@@ -285,18 +351,21 @@ func (segment *Segment) setCache() {
 	// TODO: check if we can make segmentwriter a generic Type indicator
 	// that way we can actually get the value straight from cache.Get
 	// and marchalling is obsolete
-	cache.Set(cache.Session, segment.cacheKey(), string(data), segment.Cache.Duration)
+	key, store := segment.cacheKeyAndStore()
+	cache.Set(store, key, string(data), segment.Cache.Duration)
 }
 
-func (segment *Segment) cacheKey() string {
+func (segment *Segment) cacheKeyAndStore() (string, cache.Store) {
 	format := "segment_cache_%s"
 	switch segment.Cache.Strategy {
 	case Session:
-		return fmt.Sprintf(format, segment.Name())
+		return fmt.Sprintf(format, segment.Name()), cache.Session
+	case Device:
+		return fmt.Sprintf(format, segment.Name()), cache.Device
 	case Folder:
 		fallthrough
 	default:
-		return fmt.Sprintf(format, strings.Join([]string{segment.Name(), segment.folderKey()}, "_"))
+		return fmt.Sprintf(format, strings.Join([]string{segment.Name(), segment.folderKey()}, "_")), cache.Device
 	}
 }
 
@@ -310,6 +379,15 @@ func (segment *Segment) folderKey() string {
 }
 
 func (segment *Segment) string() string {
+	// Use simple pending text if segment is still pending
+	if segment.Pending {
+		if segment.Placeholder != "" {
+			return segment.Placeholder
+		}
+
+		return "..."
+	}
+
 	result := segment.Templates.Resolve(segment.writer, "", segment.TemplatesLogic)
 	if len(result) != 0 {
 		return result

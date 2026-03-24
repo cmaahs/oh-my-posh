@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/cache"
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/mock"
+	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
 	"github.com/jandedobbeleer/oh-my-posh/src/shell"
 	"github.com/jandedobbeleer/oh-my-posh/src/template"
 
@@ -132,7 +132,7 @@ func TestHasCommand(t *testing.T) {
 		env.On("HasCommand", "git").Return(true)
 		env.On("HasCommand", "git.exe").Return(!tc.NativeFallback)
 
-		props := properties.Map{
+		props := options.Map{
 			NativeFallback: tc.NativeFallback,
 		}
 
@@ -153,6 +153,7 @@ func TestFormatBranch(t *testing.T) {
 		Expected       string
 		Input          string
 		BranchTemplate string
+		Upstream       string
 	}{
 		{
 			Case:     "No settings",
@@ -208,23 +209,32 @@ func TestFormatBranch(t *testing.T) {
 				"bug/*":  "🐛 ",
 			},
 		},
+		{
+			Case:           "Branch with upstream",
+			Input:          "feat/my-new-feature",
+			Expected:       "feat/my-new-feature@origin",
+			Upstream:       "origin",
+			BranchTemplate: "{{ .Branch }}{{ if .Upstream }}@{{ .Upstream }}{{ end }}",
+		},
 	}
 
 	for _, tc := range cases {
-		props := properties.Map{
+		props := options.Map{
 			MappedBranches: tc.MappedBranches,
 			BranchTemplate: tc.BranchTemplate,
 		}
 
-		g := &Git{}
-		g.Init(props, nil)
+		s := &Scm{
+			Upstream: tc.Upstream,
+		}
+		s.Init(props, nil)
 
 		env := new(mock.Environment)
 		env.On("Shell").Return(shell.BASH)
 		template.Cache = new(cache.Template)
 		template.Init(env, nil, nil)
 
-		got := g.formatBranch(tc.Input)
+		got := s.formatBranch(tc.Input)
 		assert.Equal(t, tc.Expected, got, tc.Case)
 	}
 }

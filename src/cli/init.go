@@ -86,7 +86,7 @@ func runInit(sh, command string) {
 
 	initCache(sh)
 
-	cfg := config.Load(configFlag, false)
+	cfg := config.Load(configFlag)
 
 	flags := &runtime.Flags{
 		Shell:      sh,
@@ -118,8 +118,10 @@ func runInit(sh, command string) {
 	var output string
 
 	switch {
-	case printOutput, debug:
-		output = shell.PrintInit(env, feats, &startTime)
+	case debug:
+		output = shell.Debug(env, feats, &startTime)
+	case printOutput:
+		output = shell.Script(env, feats)
 	default:
 		output = shell.Init(env, feats)
 	}

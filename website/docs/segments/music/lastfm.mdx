@@ -26,7 +26,7 @@ import Config from "@site/src/components/Config.js";
     background: "p:sky",
     foreground: "p:white",
     powerline_symbol: "\ue0b0",
-    properties: {
+    options: {
       api_key: "<YOUR_API_KEY>",
       username: "<LASTFM_USERNAME>",
       http_timeout: 20000,
@@ -37,14 +37,15 @@ import Config from "@site/src/components/Config.js";
   }}
 />
 
-## Properties
+## Options
 
-| Name           |   Type   |  Default  | Description                    |
-| -------------- | :------: | :-------: | ------------------------------ |
-| `playing_icon` | `string` | `\uE602 ` | text/icon to show when playing |
-| `stopped_icon` | `string` | `\uF04D ` | text/icon to show when stopped |
-| `api_key`      | `string` |           | your LastFM [API key][api-key] |
-| `username`     | `string` |           | your LastFM username           |
+| Name           |          Type           |  Default  | Description                                    |
+| -------------- | :---------------------: | :-------: | ---------------------------------------------- |
+| `playing_icon` |        `string`         | `\uE602 ` | text/icon to show when playing                 |
+| `stopped_icon` |        `string`         | `\uF04D ` | text/icon to show when stopped                 |
+| `api_key`      | [`template`][templates] |    `.`    | your LastFM [API key][api-key]                 |
+| `username`     |        `string`         |    `.`    | your LastFM username                           |
+| `http_timeout` |          `int`          |   `20`    | in milliseconds - the timeout for http request |
 
 ## Template ([info][templates])
 

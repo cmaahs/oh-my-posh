@@ -2,13 +2,46 @@
 
 Note we have a code of conduct, please follow it in all your interactions with the project.
 
-**Note:** Theme aditions are no longer accepted due to the ever growing set. We do however
-accept showcasing your custom theme in the [themes discussion section here][themes-discussion]
-or the [themes channel on Discord][discord-link].
+> [!NOTE]
+> Theme additions are no longer accepted due to the ever growing set.
+> We do however accept showcasing your custom theme in the [themes discussion section here][themes-discussion]
+> or the [themes channel on Discord][discord-link].
 
 Ensure you've read through the [documentation][docs] so you understand the core concepts of the
 project. If you're looking to get familiar with go, following the getting started [guide][guide]
 can be a good starting point.
+
+## Setting Up Agents and Skills
+
+This project uses [APM (Agent Package Manager)][apm] to manage shared AI agent skills.
+Project-specific skills live in `.github/skills/`, while shared skills are declared
+in `apm.yml` and installed via APM.
+
+### Install APM
+
+```bash
+curl -sSL https://raw.githubusercontent.com/microsoft/apm/main/install.sh | sh
+```
+
+Alternatively, install via Homebrew or pip:
+
+```bash
+brew install microsoft/apm/apm
+# or
+pip install apm-cli
+```
+
+### Install Skills
+
+After cloning the repository, run:
+
+```bash
+apm install
+```
+
+This pulls in the shared skills from [JanDeDobbeleer/agentic][agentic] (conventional commits,
+Go, Markdown, and PowerShell conventions). The project-specific skills (segment-create and
+segment-docs) are already included in the repository.
 
 ## Pull Request Process
 
@@ -33,7 +66,7 @@ Fish and PowerShell, the latter of which is the default.
 
 ### Configuring Devcontainer's Timezone & Theme
 
-1. Open the `.devcontainer/devcontainer.json` file and in the "*build*" section modify:
+1. Open the [`.devcontainer/devcontainer.json`][devcontainer] file and in the "*build*" section modify:
 
    - `TZ`: with [your own timezone][timezones]
 
@@ -81,4 +114,7 @@ go test "./..."
 [codespaces-link]: <https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=175405157>
 [devcontainer-ext]: <https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers>
 [timezones]: <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>
-[go.mod]: src\go.mod
+[devcontainer]: .devcontainer/devcontainer.json
+[go.mod]: src/go.mod
+[apm]: https://github.com/microsoft/apm
+[agentic]: https://github.com/JanDeDobbeleer/agentic

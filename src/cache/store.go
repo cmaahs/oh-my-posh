@@ -3,6 +3,7 @@ package cache
 import (
 	"encoding/gob"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -96,11 +97,32 @@ func (s Store) init(filePath string, persist bool) {
 	}
 }
 
+// touchSessionFile updates the session file's modification time if it's older than 1 hour.
+// This prevents stale session cache files from being cleaned up while reducing steady-state overhead.
+func touchSessionFile(filePath string) {
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return
+	}
+
+	if time.Since(info.ModTime()) <= time.Hour {
+		return
+	}
+
+	if err := os.Chtimes(filePath, time.Now(), time.Now()); err != nil {
+		log.Error(err)
+	}
+}
+
 func (s Store) close() {
 	defer log.Trace(time.Now(), string(s))
 
 	store := s.get()
 	if store == nil || !store.persist || !store.dirty {
+		if s == Session && store != nil && store.filePath != "" {
+			touchSessionFile(store.filePath)
+		}
+
 		log.Debugf("(%s) not persisting", string(s))
 		return
 	}
@@ -113,7 +135,11 @@ func (s Store) close() {
 		return
 	}
 
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Error(err)
+		}
+	}()
 
 	enc := gob.NewEncoder(file)
 	if err := enc.Encode(cache); err != nil {
@@ -228,7 +254,7 @@ func Print(s Store) string {
 		builder.WriteString("\n")
 
 		if entry.Expired() {
-			builder.WriteString(fmt.Sprintf("Key: %s [EXPIRED]\n", key))
+			fmt.Fprintf(&builder, "Key: %s [EXPIRED]\n", key)
 			builder.WriteString("\n")
 			continue
 		}
@@ -242,11 +268,11 @@ func Print(s Store) string {
 			ttlInfo = fmt.Sprintf("expires at %s", expiresAt.Format("2006-01-02 15:04:05"))
 		}
 
-		builder.WriteString(fmt.Sprintf("Key: %s\n", key))
-		builder.WriteString(fmt.Sprintf("  Value: %s\n", fmt.Sprintf("%#v", entry.Value)))
-		builder.WriteString(fmt.Sprintf("  Type: %T\n", entry.Value))
-		builder.WriteString(fmt.Sprintf("  Created: %s\n", time.Unix(entry.Timestamp, 0).Format("2006-01-02 15:04:05")))
-		builder.WriteString(fmt.Sprintf("  TTL: %s\n", ttlInfo))
+		fmt.Fprintf(&builder, "Key: %s\n", key)
+		fmt.Fprintf(&builder, "  Value: %s\n", fmt.Sprintf("%#v", entry.Value))
+		fmt.Fprintf(&builder, "  Type: %T\n", entry.Value)
+		fmt.Fprintf(&builder, "  Created: %s\n", time.Unix(entry.Timestamp, 0).Format("2006-01-02 15:04:05"))
+		fmt.Fprintf(&builder, "  TTL: %s\n", ttlInfo)
 	}
 
 	return builder.String()

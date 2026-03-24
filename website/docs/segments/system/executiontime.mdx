@@ -10,29 +10,31 @@ Displays the execution time of the previously executed command.
 
 ## Sample Configuration
 
-import Config from '@site/src/components/Config.js';
+import Config from "@site/src/components/Config.js";
 
-<Config data={{
-  "type": "executiontime",
-  "style": "powerline",
-  "powerline_symbol": "\uE0B0",
-  "foreground": "#ffffff",
-  "background": "#8800dd",
-  "template": " <#fefefe>\ueba2</> {{ .FormattedMs }} ",
-  "properties": {
-    "threshold": 500,
-    "style": "austin",
-    "always_enabled": true
-  }
-}}/>
+<Config
+  data={{
+    type: "executiontime",
+    style: "powerline",
+    powerline_symbol: "\uE0B0",
+    foreground: "#ffffff",
+    background: "#8800dd",
+    template: " <#fefefe>\ueba2</> {{ .FormattedMs }} ",
+    options: {
+      threshold: 500,
+      style: "austin",
+      always_enabled: true,
+    },
+  }}
+/>
 
-## Properties
+## Options
 
-| Name             | Type      | Default  | Description                                                               |
-| ---------------- | :-------: | :------: | ------------------------------------------------------------------------- |
-| `always_enabled` | `boolean` | `false`  | always show the duration                                                  |
-| `threshold`      | `number`  | `500`    | minimum duration (milliseconds) required to enable this segment           |
-| `style`          | `enum`    | `austin` | one of the available format options                                       |
+| Name             |   Type    | Default  | Description                                                     |
+| ---------------- | :-------: | :------: | --------------------------------------------------------------- |
+| `always_enabled` | `boolean` | `false`  | always show the duration                                        |
+| `threshold`      |   `int`   |  `500`   | minimum duration (milliseconds) required to enable this segment |
+| `style`          |  `enum`   | `austin` | one of the available format options                             |
 
 ### Style
 
@@ -49,13 +51,16 @@ Style specifies the format in which the time will be displayed. The table below 
 | `amarillo`    | `0.001s`       | `2.1s`         | `182.1s`       | `14,582.1s`      |
 | `round`       | `1ms`          | `2s`           | `3m 2s`        | `4h 3m`          |
 | `lucky7`      | `    1ms`      | ` 2.00s `      | ` 3m  2s`      | ` 4h  3m`        |
+| `iso8601`     | `PT0S`         | `PT2S`         | `PT3M2S`       | `PT4H3M2S`       |
+| `iso8601ms`   | `PT0.001S`     | `PT2.1S`       | `PT3M2.1S`     | `PT4H3M2.1S`     |
+
 
 ## Template ([info][templates])
 
 :::note default template
 
 ```template
-{{ .FormattedMs }}
+ {{ .FormattedMs }}
 ```
 
 :::

@@ -18,7 +18,7 @@
         },
         {
           "foreground": "#689f38",
-          "properties": {
+          "options": {
             "time_format": "15:04:05"
           },
           "style": "plain",
@@ -42,7 +42,7 @@
           "background": "#91ddff",
           "foreground": "#100e23",
           "powerline_symbol": "\ue0b0",
-          "properties": {
+          "options": {
             "style": "folder"
           },
           "style": "powerline",
@@ -59,10 +59,10 @@
           ],
           "foreground": "#100e23",
           "powerline_symbol": "\ue0b0",
-          "properties": {
+          "options": {
             "branch_ahead_icon": "\u2191",
             "branch_behind_icon": "\u2193",
-            "branch_gone": "\u2262",
+            "branch_gone_icon": "\u2262",
             "branch_icon": "\ue0a0 ",
             "branch_identical_icon": "\u2261",
             "cherry_pick_icon": "\u2713 ",
@@ -117,5 +117,5 @@
     }
   ],
   "final_space": true,
-  "version": 3
+  "version": 4
 }

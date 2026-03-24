@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/mock"
+	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
 	"gopkg.in/ini.v1"
 
 	"github.com/stretchr/testify/assert"
@@ -34,7 +34,7 @@ func TestEnabledGitNotFound(t *testing.T) {
 	env.On("IsWsl").Return(false)
 
 	g := &Git{}
-	g.Init(properties.Map{}, env)
+	g.Init(options.Map{}, env)
 
 	assert.False(t, g.Enabled())
 }
@@ -60,7 +60,7 @@ func TestEnabledInWorkingDirectory(t *testing.T) {
 	env.On("DirMatchesOneOf", testify_.Anything, testify_.Anything).Return(false)
 
 	g := &Git{}
-	g.Init(properties.Map{}, env)
+	g.Init(options.Map{}, env)
 
 	assert.True(t, g.Enabled())
 	assert.Equal(t, fileInfo.Path, g.mainSCMDir)
@@ -126,6 +126,16 @@ func TestEnabledInWorktree(t *testing.T) {
 			ExpectedRealFolder:    TestRootPath + "dev/",
 			ExpectedRootFolder:    TestRootPath + "dev/separate/.git/posh",
 		},
+		{
+			Case:                  "worktree with relative gitdir path",
+			ExpectedEnabled:       true,
+			WorkingFolder:         TestRootPath + "dev/.git/worktrees/folder_worktree",
+			WorkingFolderAddon:    "gitdir",
+			WorkingFolderContent:  "../../../worktree/.git\n",
+			ExpectedWorkingFolder: TestRootPath + "dev/.git/worktrees/folder_worktree",
+			ExpectedRealFolder:    TestRootPath + "dev/worktree",
+			ExpectedRootFolder:    TestRootPath + dotGit,
+		},
 	}
 	fileInfo := &runtime.FileInfo{
 		Path:         TestRootPath + dotGit,
@@ -140,7 +150,7 @@ func TestEnabledInWorktree(t *testing.T) {
 		env.On("PathSeparator").Return(string(os.PathSeparator))
 
 		g := &Git{}
-		g.Init(properties.Map{}, env)
+		g.Init(options.Map{}, env)
 
 		assert.Equal(t, tc.ExpectedEnabled, g.hasWorktree(fileInfo), tc.Case)
 		assert.Equal(t, tc.ExpectedWorkingFolder, g.mainSCMDir, tc.Case)
@@ -179,7 +189,7 @@ func TestEnabledInBareRepo(t *testing.T) {
 		env.On("HasParentFilePath", ".git", true).Return(&runtime.FileInfo{IsDir: true, Path: path}, nil)
 		env.On("FileContent", "git/HEAD").Return(tc.HEAD)
 
-		props := properties.Map{
+		props := options.Map{
 			FetchBareInfo: true,
 		}
 
@@ -211,7 +221,7 @@ func TestGetGitOutputForCommand(t *testing.T) {
 			command: GITCOMMAND,
 		},
 	}
-	g.Init(properties.Map{}, env)
+	g.Init(options.Map{}, env)
 
 	got := g.getGitCommandOutput(commandArgs...)
 	assert.Equal(t, want, got)
@@ -352,7 +362,7 @@ func TestSetGitHEADContextClean(t *testing.T) {
 		env.On("HasFilesInDir", "", "sequencer/todo").Return(tc.Sequencer)
 		env.On("FileContent", "/sequencer/todo").Return(tc.Theirs)
 
-		props := properties.Map{
+		props := options.Map{
 			BranchIcon:     "branch ",
 			CommitIcon:     "commit ",
 			RebaseIcon:     "rebase ",
@@ -409,7 +419,7 @@ func TestSetPrettyHEADName(t *testing.T) {
 		env.MockGitCommand("", tc.Tag, "describe", "--tags", "--exact-match")
 		env.MockGitCommand("", tc.SymbolicName, "rev-parse", "--symbolic-full-name", "HEAD")
 
-		props := properties.Map{
+		props := options.Map{
 			BranchIcon: "branch ",
 			CommitIcon: "commit ",
 			TagIcon:    "tag ",
@@ -459,7 +469,7 @@ func TestSetGitStatus(t *testing.T) {
 			1 .U N...
 			1 A. N...
 			`,
-			ExpectedWorking:      &GitStatus{ScmStatus: ScmStatus{Modified: 4, Added: 2, Deleted: 1, Unmerged: 1}},
+			ExpectedWorking:      &GitStatus{ScmStatus: ScmStatus{Modified: 4, Added: 3, Deleted: 1, Unmerged: 1}},
 			ExpectedStaging:      &GitStatus{ScmStatus: ScmStatus{Added: 1}},
 			ExpectedHash:         "1234567",
 			ExpectedRef:          "rework-git-status",
@@ -482,7 +492,7 @@ func TestSetGitStatus(t *testing.T) {
 			1 .U N...
 			1 A. N...
 			`,
-			ExpectedWorking:  &GitStatus{ScmStatus: ScmStatus{Modified: 4, Added: 2, Deleted: 1, Unmerged: 1}},
+			ExpectedWorking:  &GitStatus{ScmStatus: ScmStatus{Modified: 4, Added: 3, Deleted: 1, Unmerged: 1}},
 			ExpectedStaging:  &GitStatus{ScmStatus: ScmStatus{Added: 1}},
 			ExpectedUpstream: "origin/rework-git-status",
 			ExpectedHash:     "1234567",
@@ -576,6 +586,26 @@ func TestSetGitStatus(t *testing.T) {
 			Merge:            true,
 			ExpectedStaging:  &GitStatus{ScmStatus: ScmStatus{Unmerged: 4}},
 		},
+		{
+			Case: "staged new file also appears in working",
+			Output: `
+			# branch.oid 1234567891011121314
+			# branch.head main
+			# branch.upstream origin/main
+			# branch.ab +0 -0
+			1 .M N...
+			1 A. N...
+			? untracked1
+			? untracked2
+			? untracked3
+			? untracked4
+			`,
+			ExpectedUpstream: "origin/main",
+			ExpectedHash:     "1234567",
+			ExpectedRef:      "main",
+			ExpectedWorking:  &GitStatus{ScmStatus: ScmStatus{Modified: 1, Added: 1, Untracked: 4}},
+			ExpectedStaging:  &GitStatus{ScmStatus: ScmStatus{Added: 1}},
+		},
 	}
 	for _, tc := range cases {
 		env := new(mock.Environment)
@@ -588,7 +618,7 @@ func TestSetGitStatus(t *testing.T) {
 				command: GITCOMMAND,
 			},
 		}
-		g.Init(properties.Map{}, env)
+		g.Init(options.Map{}, env)
 
 		if tc.ExpectedWorking == nil {
 			tc.ExpectedWorking = &GitStatus{}
@@ -635,7 +665,7 @@ func TestGetStashContextZeroEntries(t *testing.T) {
 				mainSCMDir: "",
 			},
 		}
-		g.Init(properties.Map{}, env)
+		g.Init(options.Map{}, env)
 
 		got := g.StashCount()
 		assert.Equal(t, tc.Expected, got)
@@ -651,6 +681,7 @@ func TestGitCleanSSHURL(t *testing.T) {
 		{Case: "regular URL", Expected: "https://src.example.com/user/repo", Upstream: "/src.example.com/user/repo.git"},
 		{Case: "domain:path", Expected: "https://host.xz/path/to/repo", Upstream: "host.xz:/path/to/repo.git/"},
 		{Case: "ssh with port", Expected: "https://host.xz/path/to/repo", Upstream: "ssh://user@host.xz:1234/path/to/repo.git"},
+		{Case: "ssh with 3-digit port", Expected: "https://host.xz/path/to/repo", Upstream: "ssh://user@host.xz:234/path/to/repo.git"},
 		{Case: "ssh with port, trailing slash", Expected: "https://host.xz/path/to/repo", Upstream: "ssh://user@host.xz:1234/path/to/repo.git/"},
 		{Case: "ssh without port", Expected: "https://host.xz/path/to/repo", Upstream: "ssh://user@host.xz/path/to/repo.git/"},
 		{Case: "ssh port, no user", Expected: "https://host.xz/path/to/repo", Upstream: "ssh://host.xz:1234/path/to/repo.git"},
@@ -676,11 +707,11 @@ func TestGitUpstream(t *testing.T) {
 		Expected string
 		Upstream string
 	}{
-		{Case: "No upstream", Expected: "", Upstream: ""},
+		{Case: "No upstream", Expected: "G", Upstream: ""},
 		{Case: "SSH url", Expected: "G", Upstream: "ssh://git@git.my.domain:3001/ADIX7/dotconfig.git"},
 		{Case: "Gitea", Expected: "EX", Upstream: "_gitea@src.example.com:user/repo.git"},
 		{Case: "GitHub", Expected: "GH", Upstream: "github.com/test"},
-		{Case: "Gitlab", Expected: "GL", Upstream: "gitlab.com/test"},
+		{Case: "GitLab", Expected: "GL", Upstream: "gitlab.com/test"},
 		{Case: "Bitbucket", Expected: "BB", Upstream: "bitbucket.org/test"},
 		{Case: "Azure DevOps", Expected: "AD", Upstream: "dev.azure.com/test"},
 		{Case: "Azure DevOps Dos", Expected: "AD", Upstream: "test.visualstudio.com"},
@@ -696,7 +727,7 @@ func TestGitUpstream(t *testing.T) {
 		env.On("RunCommand", "git", []string{"-C", "", "--no-optional-locks", "-c", "core.quotepath=false",
 			"-c", "color.status=false", "remote", "get-url", origin}).Return(tc.Upstream, nil)
 		env.On("GOOS").Return("unix")
-		props := properties.Map{
+		props := options.Map{
 			GithubIcon:      "GH",
 			GitlabIcon:      "GL",
 			BitbucketIcon:   "BB",
@@ -712,9 +743,9 @@ func TestGitUpstream(t *testing.T) {
 
 		g := &Git{
 			Scm: Scm{
-				command: GITCOMMAND,
+				command:  GITCOMMAND,
+				Upstream: "origin/main",
 			},
-			Upstream: "origin/main",
 		}
 		g.Init(props, env)
 
@@ -747,7 +778,7 @@ func TestGetBranchStatus(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		props := properties.Map{
+		props := options.Map{
 			BranchAheadIcon:     "up",
 			BranchBehindIcon:    "down",
 			BranchIdenticalIcon: "equal",
@@ -755,9 +786,11 @@ func TestGetBranchStatus(t *testing.T) {
 		}
 
 		g := &Git{
+			Scm: Scm{
+				Upstream: tc.Upstream,
+			},
 			Ahead:        tc.Ahead,
 			Behind:       tc.Behind,
-			Upstream:     tc.Upstream,
 			UpstreamGone: tc.UpstreamGone,
 		}
 		g.Init(props, new(mock.Environment))
@@ -892,12 +925,12 @@ func TestGitTemplateString(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		props := properties.Map{
+		props := options.Map{
 			FetchStatus: true,
 		}
 		env := new(mock.Environment)
 		tc.Git.env = env
-		tc.Git.props = props
+		tc.Git.options = props
 		assert.Equal(t, tc.Expected, renderTemplate(env, tc.Template, tc.Git), tc.Case)
 	}
 }
@@ -937,7 +970,7 @@ func TestGitUntrackedMode(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		props := properties.Map{
+		props := options.Map{
 			UntrackedModes: tc.UntrackedModes,
 		}
 
@@ -960,7 +993,7 @@ func TestGitIgnoreSubmodules(t *testing.T) {
 		Expected         string
 	}{
 		{
-			Case:     "Overide",
+			Case:     "Override",
 			Expected: "--ignore-submodules=all",
 			IgnoreSubmodules: map[string]string{
 				"foo": "all",
@@ -982,7 +1015,7 @@ func TestGitIgnoreSubmodules(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		props := properties.Map{
+		props := options.Map{
 			IgnoreSubmodules: tc.IgnoreSubmodules,
 		}
 
@@ -1123,7 +1156,7 @@ func TestGitCommit(t *testing.T) {
 				command: GITCOMMAND,
 			},
 		}
-		g.Init(properties.Map{}, env)
+		g.Init(options.Map{}, env)
 
 		got := g.Commit()
 		assert.Equal(t, tc.Expected, got, tc.Case)
@@ -1206,7 +1239,7 @@ func TestGitRemotes(t *testing.T) {
 				repoRootDir: "foo",
 			},
 		}
-		g.Init(properties.Map{}, env)
+		g.Init(options.Map{}, env)
 
 		g.configOnce = sync.Once{}
 		g.configOnce.Do(func() {
@@ -1265,7 +1298,7 @@ func TestGitRepoName(t *testing.T) {
 			},
 			IsWorkTree: tc.IsWorkTree,
 		}
-		g.Init(properties.Map{}, env)
+		g.Init(options.Map{}, env)
 
 		got := g.repoName()
 		assert.Equal(t, tc.Expected, got, tc.Case)
@@ -1281,7 +1314,7 @@ func TestDisableWithJJEnabled(t *testing.T) {
 	env.On("HasParentFilePath", ".jj", false).Return(&runtime.FileInfo{Path: "/dir/.jj", IsDir: true}, nil)
 
 	g := &Git{}
-	props := properties.Map{
+	props := options.Map{
 		DisableWithJJ: true,
 	}
 	g.Init(props, env)
@@ -1312,7 +1345,7 @@ func TestDisableWithJJDisabled(t *testing.T) {
 	env.On("DirMatchesOneOf", testify_.Anything, testify_.Anything).Return(false)
 
 	g := &Git{}
-	props := properties.Map{
+	props := options.Map{
 		DisableWithJJ: false, // Property is disabled
 	}
 	g.Init(props, env)
@@ -1343,7 +1376,7 @@ func TestDisableWithJJNoJJDirectory(t *testing.T) {
 	env.On("DirMatchesOneOf", testify_.Anything, testify_.Anything).Return(false)
 
 	g := &Git{}
-	props := properties.Map{
+	props := options.Map{
 		DisableWithJJ: true, // Property is enabled but no .jj directory
 	}
 	g.Init(props, env)
@@ -1417,12 +1450,12 @@ func TestPushStatusAheadAndBehind(t *testing.T) {
 				command:     "git",
 				repoRootDir: "/dir",
 				scmDir:      "/dir/.git",
+				Upstream:    "origin/main",
 			},
-			Ref:      "main",
-			Upstream: "origin/main",
+			Ref: "main",
 		}
 
-		props := properties.Map{
+		props := options.Map{
 			FetchPushStatus: true,
 		}
 

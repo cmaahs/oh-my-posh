@@ -21,13 +21,13 @@ import Config from "@site/src/components/Config.js";
     leading_diamond: "\ue0b6",
     trailing_diamond: "\uE0B0",
     template: "{{ .IP }}",
-    properties: {
+    options: {
       http_timeout: 1000,
     },
   }}
 />
 
-## Properties
+## Options
 
 | Name             |   Type   |         Default         | Description                                                                                                                                                                                                        |
 | ---------------- | :------: | :---------------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -40,16 +40,17 @@ import Config from "@site/src/components/Config.js";
 :::note default template
 
 ```template
-{{ .IP }}
+ {{ .IP }}
 ```
 
 :::
 
 ### Properties
 
-| Name | Type     | Description              |
-| ---- | -------- | ------------------------ |
-| .IP  | `string` | Your external IP address |
+| Name  | Type     | Description              |
+| ----- | -------- | ------------------------ |
+| `.IP` | `string` | Your external IP address |
 
-[templates]: /docs/configuration/templates
 [ipify]: https://www.ipify.org/
+[templates]: /docs/configuration/templates
+[time.ParseDuration]: https://golang.org/pkg/time/#ParseDuration

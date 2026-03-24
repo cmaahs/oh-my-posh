@@ -3,18 +3,18 @@ package segments
 import (
 	"testing"
 
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/mock"
+	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
 
 	"github.com/alecthomas/assert"
 )
 
 func TestNodeMatchesVersionFile(t *testing.T) {
 	nodeVersion := Version{
-		Full:  "22.17.0",
+		Full:  "22.21.1",
 		Major: "22",
-		Minor: "17",
-		Patch: "0",
+		Minor: "21",
+		Patch: "1",
 	}
 	cases := []struct {
 		Case            string
@@ -23,16 +23,16 @@ func TestNodeMatchesVersionFile(t *testing.T) {
 		Expected        bool
 	}{
 		{Case: "no file context", Expected: true, RCVersion: ""},
-		{Case: "version match", Expected: true, ExpectedVersion: "22.17.0", RCVersion: "22.17.0"},
-		{Case: "version match with newline", Expected: true, ExpectedVersion: "22.17.0", RCVersion: "22.17.0\n"},
+		{Case: "version match", Expected: true, ExpectedVersion: "22.21.1", RCVersion: "22.21.1"},
+		{Case: "version match with newline", Expected: true, ExpectedVersion: "22.21.1", RCVersion: "22.21.1\n"},
 		{Case: "version mismatch", Expected: false, ExpectedVersion: "3.2.1", RCVersion: "3.2.1"},
-		{Case: "version match in other format", Expected: true, ExpectedVersion: "22.17.0", RCVersion: "v22.17.0"},
-		{Case: "version match without patch", Expected: true, ExpectedVersion: "22.17", RCVersion: "22.17"},
-		{Case: "version match without patch in other format", Expected: true, ExpectedVersion: "22.17", RCVersion: "v22.17"},
+		{Case: "version match in other format", Expected: true, ExpectedVersion: "22.21.1", RCVersion: "v22.21.1"},
+		{Case: "version match without patch", Expected: true, ExpectedVersion: "22.21", RCVersion: "22.21"},
+		{Case: "version match without patch in other format", Expected: true, ExpectedVersion: "22.21", RCVersion: "v22.21"},
 		{Case: "version match without minor", Expected: true, ExpectedVersion: "22", RCVersion: "22"},
 		{Case: "version match without minor in other format", Expected: true, ExpectedVersion: "22", RCVersion: "v22"},
-		{Case: "lts match", Expected: true, ExpectedVersion: "22.17.0", RCVersion: "lts/jod"},
-		{Case: "lts match upper case", Expected: true, ExpectedVersion: "22.17.0", RCVersion: "lts/Jod"},
+		{Case: "lts match", Expected: true, ExpectedVersion: "22.21.1", RCVersion: "lts/jod"},
+		{Case: "lts match upper case", Expected: true, ExpectedVersion: "22.21.1", RCVersion: "lts/Jod"},
 		{Case: "lts mismatch", Expected: false, ExpectedVersion: "8.17.0", RCVersion: "lts/carbon"},
 	}
 
@@ -45,7 +45,7 @@ func TestNodeMatchesVersionFile(t *testing.T) {
 				Version: nodeVersion,
 			},
 		}
-		node.Init(properties.Map{}, env)
+		node.Init(options.Map{}, env)
 
 		version, match := node.matchesVersionFile()
 		assert.Equal(t, tc.Expected, match, tc.Case)
@@ -86,7 +86,7 @@ func TestNodeInContext(t *testing.T) {
 		env.On("HasFiles", "bun.lockb").Return(tc.hasBun)
 		env.On("HasFiles", "bun.lock").Return(tc.hasBun)
 
-		props := properties.Map{
+		props := options.Map{
 			PnpmIcon:            "pnpm",
 			YarnIcon:            "yarn",
 			NPMIcon:             "npm",

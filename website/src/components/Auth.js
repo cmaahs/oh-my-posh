@@ -27,7 +27,7 @@ function Auth() {
   {
     "type": "${params.get('segment')}",
     ...
-    "properties": {
+    "options": {
       // highlight-start
       "access_token": "${params.get('access_token')}",
       "refresh_token": "${params.get('refresh_token')}",
@@ -39,9 +39,9 @@ function Auth() {
 
   return (
     <div>
-        <p>
-          Use the following snippet to adjust your segment and enable the authentication.
-        </p>
+      <p>
+        Use the following snippet to adjust your segment and enable the authentication.
+      </p>
       <CodeBlock className="language-json" title="config.omp.json">
         {config}
       </CodeBlock>

@@ -3,10 +3,11 @@ package segments
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	http2 "net/http"
 	"time"
 
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
+	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
 )
 
 // segment struct, makes templating easier
@@ -19,16 +20,16 @@ type Nightscout struct {
 
 const (
 	// Your complete Nightscout URL and APIKey like this
-	URL     properties.Property = "url"
-	Headers properties.Property = "headers"
+	URL     options.Option = "url"
+	Headers options.Option = "headers"
 
-	DoubleUpIcon      properties.Property = "doubleup_icon"
-	SingleUpIcon      properties.Property = "singleup_icon"
-	FortyFiveUpIcon   properties.Property = "fortyfiveup_icon"
-	FlatIcon          properties.Property = "flat_icon"
-	FortyFiveDownIcon properties.Property = "fortyfivedown_icon"
-	SingleDownIcon    properties.Property = "singledown_icon"
-	DoubleDownIcon    properties.Property = "doubledown_icon"
+	DoubleUpIcon      options.Option = "doubleup_icon"
+	SingleUpIcon      options.Option = "singleup_icon"
+	FortyFiveUpIcon   options.Option = "fortyfiveup_icon"
+	FlatIcon          options.Option = "flat_icon"
+	FortyFiveDownIcon options.Option = "fortyfivedown_icon"
+	SingleDownIcon    options.Option = "singledown_icon"
+	DoubleDownIcon    options.Option = "doubledown_icon"
 )
 
 // NightscoutData struct contains the API data
@@ -44,6 +45,38 @@ type NightscoutData struct {
 	Trend      int       `json:"trend"`
 	UtcOffset  int       `json:"utcOffset"`
 	Mills      int64     `json:"mills"`
+}
+
+// UnmarshalJSON handles both integer and floating-point JSON numbers for the date field.
+// Some Nightscout API providers (e.g. T1Pal) return the date as a float.
+func (n *NightscoutData) UnmarshalJSON(data []byte) error {
+	type Alias NightscoutData
+	aux := &struct {
+		*Alias
+		Date json.Number `json:"date"`
+	}{
+		Alias: (*Alias)(n),
+	}
+
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+
+	if aux.Date == "" {
+		return nil
+	}
+
+	if i, err := aux.Date.Int64(); err == nil {
+		n.Date = i
+		return nil
+	}
+
+	if f, err := aux.Date.Float64(); err == nil {
+		n.Date = int64(f)
+		return nil
+	}
+
+	return fmt.Errorf("date field must be a valid number, got: %s", aux.Date)
 }
 
 func (ns *Nightscout) Template() string {
@@ -64,19 +97,19 @@ func (ns *Nightscout) Enabled() bool {
 func (ns *Nightscout) getTrendIcon() string {
 	switch ns.Direction {
 	case "DoubleUp":
-		return ns.props.GetString(DoubleUpIcon, "↑↑")
+		return ns.options.String(DoubleUpIcon, "↑↑")
 	case "SingleUp":
-		return ns.props.GetString(SingleUpIcon, "↑")
+		return ns.options.String(SingleUpIcon, "↑")
 	case "FortyFiveUp":
-		return ns.props.GetString(FortyFiveUpIcon, "↗")
+		return ns.options.String(FortyFiveUpIcon, "↗")
 	case "Flat":
-		return ns.props.GetString(FlatIcon, "→")
+		return ns.options.String(FlatIcon, "→")
 	case "FortyFiveDown":
-		return ns.props.GetString(FortyFiveDownIcon, "↘")
+		return ns.options.String(FortyFiveDownIcon, "↘")
 	case "SingleDown":
-		return ns.props.GetString(SingleDownIcon, "↓")
+		return ns.options.String(SingleDownIcon, "↓")
 	case "DoubleDown":
-		return ns.props.GetString(DoubleDownIcon, "↓↓")
+		return ns.options.String(DoubleDownIcon, "↓↓")
 	default:
 		return ""
 	}
@@ -95,10 +128,10 @@ func (ns *Nightscout) getResult() (*NightscoutData, error) {
 		return result[0], nil
 	}
 
-	url := ns.props.GetString(URL, "")
-	httpTimeout := ns.props.GetInt(properties.HTTPTimeout, properties.DefaultHTTPTimeout)
+	url := ns.options.Template(URL, "", ns)
+	httpTimeout := ns.options.Int(options.HTTPTimeout, options.DefaultHTTPTimeout)
 
-	headers := ns.props.GetKeyValueMap(Headers, map[string]string{})
+	headers := ns.options.KeyValueMap(Headers, map[string]string{})
 	modifiers := func(request *http2.Request) {
 		for key, value := range headers {
 			request.Header.Add(key, value)

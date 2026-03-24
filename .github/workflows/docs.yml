@@ -18,21 +18,21 @@ jobs:
     runs-on: ubuntu-latest
     name: Build and Deploy
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
         with:
           submodules: true
           persist-credentials: false
       - name: Install Go 🗳
         uses: ./.github/workflows/composite/bootstrap-go
       - name: Setup Node.js
-        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: 20.9.0
         # Create Kind cluster to have a Kubernetes context for cloud-native-azure theme
         # Images are defined on every Kind release
         # See https://github.com/kubernetes-sigs/kind/releases
       - name: Create k8s v1.23 Kind Cluster
-        uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab
+        uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc
         with:
           node_image: kindest/node:v1.23.4@sha256:0e34f0d0fd448aa2f2819cfd74e99fe5793a6e4938b328f657c8e3f81ee0dfb9
           cluster_name: posh
@@ -42,7 +42,7 @@ jobs:
       - name: Set default Kubernetes namespace
         run: |
           kubectl config set-context posh --namespace demo
-      - uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
+      - uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Build oh-my-posh 🔧
@@ -67,7 +67,7 @@ jobs:
         uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ASHY_MEADOW_063E9BA03 }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
+          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for GitHub integrations (i.e. PR comments)
           action: "upload"
           ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig

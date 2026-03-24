@@ -5,9 +5,9 @@
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
-      // Update the VARIANT arg to pick a version of Go: 1, 1.23, 1.24
-      // Append -bookworm or -bullseye to pin to an OS version.
-      "VARIANT": "1-1.24-bullseye",
+      // Update the VARIANT arg to pick a version of Go: 1, 1.25, 1.26
+      // Append -trixie, -bookworm or -bullseye to pin to an OS version.
+      "VARIANT": "2-1.26-trixie",
 
       // Override me with your own timezone:
       "TZ": "UTC",
@@ -16,7 +16,7 @@
 
       "NODE_VERSION": "lts/*",
       //Powershell version
-      "PS_VERSION": "7.2.7"
+      "PS_VERSION": "7.5.4"
     }
   },
   "runArgs": [
@@ -63,18 +63,19 @@
         "tasks.statusbar.default.hide": true
       },
       "extensions": [
-        "actboy168.tasks",
-        "eamodio.gitlens",
-        "tamasfe.even-better-toml",
+        "bmalehorn.vscode-fish",
         "davidanson.vscode-markdownlint",
-        "editorconfig.editorconfig",
+        "elves.elvish",
         "esbenp.prettier-vscode",
         "github.vscode-pull-request-github",
         "golang.go",
+        "jnoortheen.xonsh",
+        "ms-azuretools.vscode-azurefunctions",
         "ms-vscode.powershell",
         "redhat.vscode-yaml",
-        "yzhang.markdown-all-in-one",
-        "ms-azuretools.vscode-azurefunctions"
+        "sumneko.lua",
+        "tamasfe.even-better-toml",
+        "yzhang.markdown-all-in-one"
       ]
     }
   },

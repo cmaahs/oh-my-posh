@@ -18,26 +18,26 @@ These properties can be used anywhere, in any segment. If a segment contains a p
 the segment property value will be used instead. In case you want to use the global property, you can prefix
 it with `.$` to reference it directly.
 
-| Name            | Type                  | Description                                                                 |
-| --------------- | --------------------- | --------------------------------------------------------------------------- |
-| `.Root`         | `boolean`             | is the current user root/admin or not                                       |
-| `.PWD`          | `string`              | the current working directory (`~` for `$HOME`)                             |
-| `.AbsolutePWD`  | `string`              | the current working directory (unaltered)                                   |
-| `.PSWD`         | `string`              | the current non-filesystem working directory in PowerShell                  |
-| `.Folder`       | `string`              | the current working folder                                                  |
-| `.Shell`        | `string`              | the current shell name                                                      |
-| `.ShellVersion` | `string`              | the current shell version                                                   |
-| `.SHLVL`        | `int`                 | the current shell level                                                     |
-| `.UserName`     | `string`              | the current user name                                                       |
-| `.HostName`     | `string`              | the host name                                                               |
-| `.Code`         | `int`                 | the last exit code                                                          |
-| `.Jobs`         | `int`                 | number of background jobs (only available for zsh, PowerShell, and Nushell) |
-| `.OS`           | `string`              | the operating system                                                        |
-| `.WSL`          | `boolean`             | in WSL yes/no                                                               |
-| `.Templates`    | `string`              | the [templates][templates] result                                           |
-| `.PromptCount`  | `int`                 | the prompt counter, increments with 1 for every prompt invocation           |
-| `.Version`      | `string`              | the Oh My Posh version                                                      |
-| `.Segment`      | [`Segment`](#segment) | the current segment's metadata                                              |
+| Name            | Type                  | Description                                                                      |
+| --------------- | --------------------- | -------------------------------------------------------------------------------- |
+| `.Root`         | `boolean`             | is the current user root/admin or not                                            |
+| `.PWD`          | `string`              | the current working directory (`~` for `$HOME`)                                  |
+| `.AbsolutePWD`  | `string`              | the current working directory (unaltered)                                        |
+| `.PSWD`         | `string`              | the current non-filesystem working directory in PowerShell                       |
+| `.Folder`       | `string`              | the current working folder                                                       |
+| `.Shell`        | `string`              | the current shell name. The value may be overriden by [`maps.shell_name`][maps]. |
+| `.ShellVersion` | `string`              | the current shell version                                                        |
+| `.SHLVL`        | `int`                 | the current shell level                                                          |
+| `.UserName`     | `string`              | the current user name                                                            |
+| `.HostName`     | `string`              | the host name                                                                    |
+| `.Code`         | `int`                 | the last exit code                                                               |
+| `.Jobs`         | `int`                 | number of background jobs (only available for zsh, PowerShell, and Nushell)      |
+| `.OS`           | `string`              | the operating system                                                             |
+| `.WSL`          | `boolean`             | in WSL yes/no                                                                    |
+| `.Templates`    | `string`              | the [templates][templates] result                                                |
+| `.PromptCount`  | `int`                 | the prompt counter, increments with 1 for every prompt invocation                |
+| `.Version`      | `string`              | the Oh My Posh version                                                           |
+| `.Segment`      | [`Segment`](#segment) | the current segment's metadata                                                   |
 
 ### Segment
 
@@ -128,13 +128,11 @@ $env.SET_POSHCONTEXT = {
 
 <Config
   data={{
-    version: 3,
-    // highlight-start
+    version: 4,
     var: {
       Hello: "hello",
       World: "world",
     },
-    // highlight-end
     blocks: [
       {
         type: "prompt",
@@ -144,18 +142,20 @@ $env.SET_POSHCONTEXT = {
             type: "text",
             style: "plain",
             foreground: "p:white",
-            // highlight-next-line
             template: "{{ .Var.Hello }} {{ .Var.World }} ",
           },
         ],
       },
     ],
   }}
+  metastring={{
+    json: "{3-6,16}",
+    yaml: "{2-4,12}",
+    toml: "{3-5,15}",
+  }}
 />
 
 ## Template logic
-
-<!--  markdownlint-disable MD013 -->
 
 | Template                                                             | Description                                                                                                                                                                                                                                                                                                     |
 | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -169,8 +169,6 @@ $env.SET_POSHCONTEXT = {
 | `{{range .Array}} {{end}}`                                           | Range statement, where Array is an array, slice, map, or channel.                                                                                                                                                                                                                                               |
 | `{{ lt 3 4 }}`                                                       | This lt comparison function evaluates to true since 3 is less than 4 (other boolean operators: eq, ne, lt, le, gt, ge).                                                                                                                                                                                         |
 
-<!-- markdownlint-enable MD013 -->
-
 ## Helper functions
 
 ### Sprig
@@ -180,8 +178,6 @@ manipulations straight from your template. Have a look at [their documentation][
 use them.
 
 ### Custom
-
-<!-- markdownlint-disable MD013 -->
 
 | Template                                                           | Description                                                                                                                |
 | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
@@ -194,8 +190,6 @@ use them.
 | <code>\{\{ .Code &vert; hresult \}\}</code>                        | Transform a status code to its HRESULT value for easy troubleshooting. For example `-1978335212` becomes `0x8A150014`.     |
 | `{{ readFile ".version.json" }}`                                   | Read a file in the current directory. Returns a string.                                                                    |
 | `{{ random (list \"a\" 2 .MyThirdItem) }}`                         | Selects a random element from a list. The list can be an array or slice containing any types (use sprig's `list`).         |
-
-<!-- markdownlint-enable MD013 -->
 
 ## Cross segment template properties
 
@@ -230,7 +224,7 @@ to distinct between both.
         alias: "GitMain",
         style: "plain",
         foreground: "#ffffff",
-        properties: {
+        options: {
           branch_icon: "",
         },
       },
@@ -239,7 +233,7 @@ to distinct between both.
         alias: "GitSecondary",
         style: "plain",
         foreground: "#ffffff",
-        properties: {
+        options: {
           branch_icon: "",
         },
       },
@@ -280,12 +274,11 @@ You can make use of the following syntax to decorate text:
 This can be used in templates and icons/text inside your config.
 
 [terminal-list-hyperlinks]: https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda
-[path-segment]: /docs/path
-[git-segment]: /docs/git
 [go-text-template]: https://pkg.go.dev/text/template
 [sprig]: https://masterminds.github.io/sprig/
 [glob]: https://pkg.go.dev/path/filepath#Glob
 [git]: /docs/segments/scm/git
+[maps]: /docs/configuration/general#maps
 [status]: /docs/segments/system/status
 [templates]: /docs/configuration/segment
 [regexpms]: https://pkg.go.dev/regexp#Regexp.MatchString

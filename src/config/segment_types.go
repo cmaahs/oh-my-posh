@@ -4,9 +4,9 @@ import (
 	"encoding/gob"
 	"errors"
 
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime"
 	"github.com/jandedobbeleer/oh-my-posh/src/segments"
+	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
 )
 
 // SegmentType the type of segment, for more information, see the constants
@@ -19,7 +19,7 @@ type SegmentWriter interface {
 	SetText(text string)
 	SetIndex(index int)
 	Text() string
-	Init(props properties.Properties, env runtime.Environment)
+	Init(props options.Provider, env runtime.Environment)
 	CacheKey() (string, bool)
 }
 
@@ -42,6 +42,9 @@ func init() {
 	gob.Register(&segments.Copilot{})
 	gob.Register(&segments.Cf{})
 	gob.Register(&segments.CfTarget{})
+	gob.Register(&segments.Claude{})
+	gob.Register(&segments.ClaudeData{})
+	gob.Register(&segments.Clojure{})
 	gob.Register(&segments.Cmake{})
 	gob.Register(&segments.Connection{})
 	gob.Register(&segments.Crystal{})
@@ -105,6 +108,7 @@ func init() {
 	gob.Register(&segments.Quasar{})
 	gob.Register(&segments.Package{})
 	gob.Register(&segments.R{})
+	gob.Register(&segments.Ramadan{})
 	gob.Register(&segments.React{})
 	gob.Register(&segments.Root{})
 	gob.Register(&segments.Ruby{})
@@ -123,10 +127,12 @@ func init() {
 	gob.Register(&segments.Swift{})
 	gob.Register(&segments.SystemInfo{})
 	gob.Register(&segments.TalosCTL{})
+	gob.Register(&segments.Taskwarrior{})
 	gob.Register(&segments.Tauri{})
 	gob.Register(&segments.Terraform{})
 	gob.Register(&segments.Text{})
 	gob.Register(&segments.Time{})
+	gob.Register(&segments.Todoist{})
 	gob.Register(&segments.UI5Tooling{})
 	gob.Register(&segments.Umbraco{})
 	gob.Register(&segments.Unity{})
@@ -135,6 +141,8 @@ func init() {
 	gob.Register(&segments.V{})
 	gob.Register(&segments.Vala{})
 	gob.Register(&segments.Wakatime{})
+	gob.Register(&segments.WinGet{})
+	gob.Register(&segments.WinGetPackage{})
 	gob.Register(&segments.WindowsRegistry{})
 	gob.Register(&segments.Withings{})
 	gob.Register(&segments.XMake{})
@@ -185,6 +193,10 @@ const (
 	CF SegmentType = "cf"
 	// Cloud Foundry logged in target
 	CFTARGET SegmentType = "cftarget"
+	// CLAUDE writes Claude Code session information
+	CLAUDE SegmentType = "claude"
+	// CLOJURE writes the active clojure version
+	CLOJURE SegmentType = "clojure"
 	// CMAKE writes the active cmake version
 	CMAKE SegmentType = "cmake"
 	// CONNECTION writes a connection's information
@@ -295,6 +307,8 @@ const (
 	QUASAR SegmentType = "quasar"
 	// R version
 	R SegmentType = "r"
+	// RAMADAN displays Sehar and Iftar prayer times during Ramadan
+	RAMADAN SegmentType = "ramadan"
 	// REACT writes the current react version
 	REACT SegmentType = "react"
 	// ROOT writes root symbol
@@ -327,6 +341,8 @@ const (
 	SYSTEMINFO SegmentType = "sysinfo"
 	// TALOSCTL writes the talosctl context
 	TALOSCTL SegmentType = "talosctl"
+	// TASKWARRIOR writes Taskwarrior task counts and context
+	TASKWARRIOR SegmentType = "taskwarrior"
 	// Tauri Segment
 	TAURI SegmentType = "tauri"
 	// TERRAFORM writes the terraform workspace we're currently in
@@ -335,6 +351,8 @@ const (
 	TEXT SegmentType = "text"
 	// TIME writes the current timestamp
 	TIME SegmentType = "time"
+	// TODOIST segment
+	TODOIST SegmentType = "todoist"
 	// UI5 Tooling segment
 	UI5TOOLING SegmentType = "ui5tooling"
 	// UMBRACO writes the Umbraco version if Umbraco is present
@@ -349,6 +367,8 @@ const (
 	VALA SegmentType = "vala"
 	// WAKATIME writes tracked time spend in dev editors
 	WAKATIME SegmentType = "wakatime"
+	// WINGET writes the number of available WinGet package updates
+	WINGET SegmentType = "winget"
 	// WINREG queries the Windows registry.
 	WINREG SegmentType = "winreg"
 	// WITHINGS queries the Withings API.
@@ -382,6 +402,8 @@ var Segments = map[SegmentType]func() SegmentWriter{
 	CDS:             func() SegmentWriter { return &segments.Cds{} },
 	CF:              func() SegmentWriter { return &segments.Cf{} },
 	CFTARGET:        func() SegmentWriter { return &segments.CfTarget{} },
+	CLAUDE:          func() SegmentWriter { return &segments.Claude{} },
+	CLOJURE:         func() SegmentWriter { return &segments.Clojure{} },
 	CMAKE:           func() SegmentWriter { return &segments.Cmake{} },
 	CONNECTION:      func() SegmentWriter { return &segments.Connection{} },
 	COPILOT:         func() SegmentWriter { return &segments.Copilot{} },
@@ -437,6 +459,7 @@ var Segments = map[SegmentType]func() SegmentWriter{
 	PYTHON:          func() SegmentWriter { return &segments.Python{} },
 	QUASAR:          func() SegmentWriter { return &segments.Quasar{} },
 	R:               func() SegmentWriter { return &segments.R{} },
+	RAMADAN:         func() SegmentWriter { return &segments.Ramadan{} },
 	REACT:           func() SegmentWriter { return &segments.React{} },
 	ROOT:            func() SegmentWriter { return &segments.Root{} },
 	RUBY:            func() SegmentWriter { return &segments.Ruby{} },
@@ -453,10 +476,12 @@ var Segments = map[SegmentType]func() SegmentWriter{
 	SWIFT:           func() SegmentWriter { return &segments.Swift{} },
 	SYSTEMINFO:      func() SegmentWriter { return &segments.SystemInfo{} },
 	TALOSCTL:        func() SegmentWriter { return &segments.TalosCTL{} },
+	TASKWARRIOR:     func() SegmentWriter { return &segments.Taskwarrior{} },
 	TAURI:           func() SegmentWriter { return &segments.Tauri{} },
 	TERRAFORM:       func() SegmentWriter { return &segments.Terraform{} },
 	TEXT:            func() SegmentWriter { return &segments.Text{} },
 	TIME:            func() SegmentWriter { return &segments.Time{} },
+	TODOIST:         func() SegmentWriter { return &segments.Todoist{} },
 	UI5TOOLING:      func() SegmentWriter { return &segments.UI5Tooling{} },
 	UMBRACO:         func() SegmentWriter { return &segments.Umbraco{} },
 	UNITY:           func() SegmentWriter { return &segments.Unity{} },
@@ -464,6 +489,7 @@ var Segments = map[SegmentType]func() SegmentWriter{
 	V:               func() SegmentWriter { return &segments.V{} },
 	VALA:            func() SegmentWriter { return &segments.Vala{} },
 	WAKATIME:        func() SegmentWriter { return &segments.Wakatime{} },
+	WINGET:          func() SegmentWriter { return &segments.WinGet{} },
 	WINREG:          func() SegmentWriter { return &segments.WindowsRegistry{} },
 	WITHINGS:        func() SegmentWriter { return &segments.Withings{} },
 	XMAKE:           func() SegmentWriter { return &segments.XMake{} },
@@ -475,8 +501,8 @@ var Segments = map[SegmentType]func() SegmentWriter{
 func (segment *Segment) MapSegmentWithWriter(env runtime.Environment) error {
 	segment.env = env
 
-	if segment.Properties == nil {
-		segment.Properties = make(properties.Map)
+	if segment.Options == nil {
+		segment.Options = make(options.Map)
 	}
 
 	f, ok := Segments[segment.Type]
@@ -485,11 +511,7 @@ func (segment *Segment) MapSegmentWithWriter(env runtime.Environment) error {
 	}
 
 	writer := f()
-	wrapper := &properties.Wrapper{
-		Properties: segment.Properties,
-	}
-
-	writer.Init(wrapper, env)
+	writer.Init(segment.Options, env)
 	segment.writer = writer
 
 	return nil

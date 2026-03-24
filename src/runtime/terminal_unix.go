@@ -81,6 +81,13 @@ func (term *Terminal) TerminalWidth() (int, error) {
 
 	term.CmdFlags.TerminalWidth = int(width)
 	log.Debugf("terminal width: %d", term.CmdFlags.TerminalWidth)
+
+	// Claude CLI has a 2 character padding on both sides
+	if term.CmdFlags.Shell == "claude" {
+		log.Debug("adjusting terminal width for Claude CLI")
+		term.CmdFlags.TerminalWidth -= 4
+	}
+
 	return term.CmdFlags.TerminalWidth, err
 }
 
@@ -96,21 +103,32 @@ func (term *Terminal) Platform() string {
 	}()
 
 	if wsl := term.Getenv("WSL_DISTRO_NAME"); len(wsl) != 0 {
-		platform = strings.Split(strings.ToLower(wsl), "-")[0]
+		platform, _, _ = strings.Cut(wsl, "-")
+		platform = strings.ToLower(platform)
 		log.Debug(platform)
 		return platform
 	}
 
 	platform, _, _, _ = host.PlatformInformation()
-	if platform == "arch" {
-		// validate for Manjaro
-		lsbInfo := term.FileContent("/etc/lsb-release")
-		if strings.Contains(strings.ToLower(lsbInfo), "manjaro") {
-			platform = "manjaro"
-		}
-	}
+	platform = term.getSpecialLinuxDistros(platform)
 
 	log.Debug(platform)
+	return platform
+}
+
+func (term *Terminal) getSpecialLinuxDistros(platform string) string {
+	lsbInfo := term.FileContent("/etc/lsb-release")
+
+	if platform == "arch" && strings.Contains(strings.ToLower(lsbInfo), "manjaro") {
+		// validate for Manjaro
+		return "manjaro"
+	}
+
+	if platform == "debian" && strings.Contains(strings.ToLower(lsbInfo), "zorin") {
+		// validate for Zorin OS
+		return "zorin"
+	}
+
 	return platform
 }
 

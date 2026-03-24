@@ -6,7 +6,7 @@ sidebar_label: Perl
 
 ## What
 
-Display the currently active perl version.
+Display the currently active [Perl][perl] version.
 
 ## Sample Configuration
 
@@ -23,7 +23,7 @@ import Config from "@site/src/components/Config.js";
   }}
 />
 
-## Properties
+## Options
 
 | Name                   |    Type    |             Default              | Description                                                                                                                                                                                                                          |
 | ---------------------- | :--------: | :------------------------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -35,6 +35,7 @@ import Config from "@site/src/components/Config.js";
 | `version_url_template` |  `string`  |                                  | a go [text/template][go-text-template] [template][templates] that creates the URL of the version info / release notes                                                                                                                |
 | `extensions`           | `[]string` | `*.pl, *.pm, *.t, .perl-version` | allows to override the default list of file extensions to validate                                                                                                                                                                   |
 | `folders`              | `[]string` |                                  | allows to override the list of folder names to validate                                                                                                                                                                              |
+| `tooling`              | `[]string` |             `perl`               | the tooling to use for fetching the version                                                                                                                                                                                          |
 
 ## Template ([info][templates])
 
@@ -56,5 +57,7 @@ import Config from "@site/src/components/Config.js";
 | `.Patch` | `string` | patch number                                       |
 | `.Error` | `string` | error encountered when fetching the version string |
 
+[go-text-template]: https://golang.org/pkg/text/template/
 [templates]: /docs/configuration/templates
+[perl]: https://www.perl.org/
 [time.ParseDuration]: https://golang.org/pkg/time/#ParseDuration

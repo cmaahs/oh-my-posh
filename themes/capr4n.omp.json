@@ -14,7 +14,7 @@
         {
           "background": "#83769c",
           "foreground": "#ffffff",
-          "properties": {
+          "options": {
             "always_enabled": true
           },
           "style": "plain",
@@ -30,9 +30,6 @@
         {
           "background": "#61AFEF",
           "foreground": "#ffffff",
-          "properties": {
-            "display_host": false
-          },
           "style": "diamond",
           "template": "{{if .Root}} \uf0e7 {{.UserName}} {{else}} {{.UserName}} {{end}}",
           "trailing_diamond": "\ue0b0",
@@ -42,7 +39,7 @@
           "background": "#C678DD",
           "foreground": "#ffffff",
           "powerline_symbol": "\ue0b0",
-          "properties": {
+          "options": {
             "folder_icon": "\uf115",
             "folder_separator_icon": " \ue0b1 ",
             "max_depth": 2,
@@ -66,5 +63,5 @@
   ],
   "console_title_template": "{{if .Root}} \u26a1 {{end}}{{.UserName}} \u2794 📁{{.Folder}}",
   "final_space": true,
-  "version": 3
+  "version": 4
 }

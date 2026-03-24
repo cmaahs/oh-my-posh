@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/mock"
+	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -72,7 +72,7 @@ func TestOWMSegmentSingle(t *testing.T) {
 
 	for _, tc := range cases {
 		env := &mock.Environment{}
-		props := properties.Map{
+		props := options.Map{
 			APIKey:   "key",
 			Location: tc.Location,
 			Units:    "metric",
@@ -81,8 +81,6 @@ func TestOWMSegmentSingle(t *testing.T) {
 		location := url.QueryEscape(tc.Location)
 		testURL := fmt.Sprintf(OWMWEATHERAPIURL, location)
 		env.On("HTTPRequest", testURL).Return([]byte(tc.WeatherJSONResponse), tc.Error)
-		env.On("Getenv", OWMLocationKey).Return("")
-		env.On("Getenv", OWMAPIKey).Return("")
 
 		o := &Owm{}
 		o.Init(props, env)
@@ -209,10 +207,8 @@ func TestOWMSegmentIcons(t *testing.T) {
 		expectedString := fmt.Sprintf("%s (20°C)", tc.ExpectedIconString)
 
 		env.On("HTTPRequest", testURL).Return([]byte(weatherResponse), nil)
-		env.On("Getenv", OWMLocationKey).Return("")
-		env.On("Getenv", OWMAPIKey).Return("")
 
-		props := properties.Map{
+		props := options.Map{
 			APIKey:   "key",
 			Location: "AMSTERDAM,NL",
 			Units:    "metric",

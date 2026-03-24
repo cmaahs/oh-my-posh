@@ -6,7 +6,7 @@ sidebar_label: Tauri
 
 ## What
 
-Display the currently active Tauri version.
+Display the currently active [Tauri][tauri-docs] version.
 
 ## Sample Configuration
 
@@ -23,7 +23,7 @@ import Config from "@site/src/components/Config.js";
   }}
 />
 
-## Properties
+## Options
 
 | Name                   |    Type    |      Default      | Description                                                                                                                                                                                                                          |
 | ---------------------- | :--------: | :---------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -35,6 +35,7 @@ import Config from "@site/src/components/Config.js";
 | `version_url_template` |  `string`  |                   | a go [text/template][go-text-template] [template][templates] that creates the URL of the version info / release notes                                                                                                                |
 | `extensions`           | `[]string` | `tauri.conf.json` | allows to override the default list of file extensions to validate                                                                                                                                                                   |
 | `folders`              | `[]string` |    `src-tauri`    | allows to override the list of folder names to validate                                                                                                                                                                              |
+| `tooling`              | `[]string` |      `tauri`      | the tooling to use for fetching the version                                                                                                                                                                                          |
 
 ## Template ([info][templates])
 
@@ -59,5 +60,5 @@ import Config from "@site/src/components/Config.js";
 
 [go-text-template]: https://golang.org/pkg/text/template/
 [templates]: /docs/configuration/templates
-[tauri-docs]: https://v2.tauri.app/
+[tauri-docs]: https://tauri.app/
 [time.ParseDuration]: https://golang.org/pkg/time/#ParseDuration

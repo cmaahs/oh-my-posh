@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"path/filepath"
 
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
+	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
 )
 
 const (
-	FetchDependencies properties.Property = "fetch_dependencies"
+	FetchDependencies options.Option = "fetch_dependencies"
 )
 
 type Package struct {
@@ -25,20 +25,21 @@ type Quasar struct {
 
 func (q *Quasar) Enabled() bool {
 	q.projectFiles = []string{"quasar.config", "quasar.config.js"}
-	q.commands = []*cmd{
-		{
+	q.tooling = map[string]*cmd{
+		"quasar": {
 			executable: "quasar",
 			args:       []string{"--version"},
 			regex:      `(?P<version>((?P<major>[0-9]+).(?P<minor>[0-9]+).(?P<patch>[0-9]+)))`,
 		},
 	}
+	q.defaultTooling = []string{"quasar"}
 	q.versionURLTemplate = "https://github.com/quasarframework/quasar/releases/tag/quasar-v{{ .Full }}"
 
 	if !q.Language.Enabled() {
 		return false
 	}
 
-	if q.props.GetBool(FetchDependencies, false) {
+	if q.options.Bool(FetchDependencies, false) {
 		q.fetchDependencies()
 	}
 
@@ -46,7 +47,7 @@ func (q *Quasar) Enabled() bool {
 }
 
 func (q *Quasar) Template() string {
-	return " \uea6a {{.Full}}{{ if .HasVite }} \ueb29 {{ .Vite.Version }}{{ end }} "
+	return " \ue87f {{.Full}}{{ if .HasVite }} \ueb29 {{ .Vite.Version }}{{ end }} "
 }
 
 func (q *Quasar) fetchDependencies() {

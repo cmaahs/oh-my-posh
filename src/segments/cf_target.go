@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
+	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
 )
 
 type CfTarget struct {
@@ -29,12 +29,12 @@ func (c *CfTarget) Enabled() bool {
 		return false
 	}
 
-	displayMode := c.props.GetString(DisplayMode, DisplayModeAlways)
+	displayMode := c.options.String(DisplayMode, DisplayModeAlways)
 	if displayMode != DisplayModeFiles {
 		return c.setCFTargetStatus()
 	}
 
-	files := c.props.GetStringArray(properties.Files, []string{"manifest.yml"})
+	files := c.options.StringArray(options.Files, []string{"manifest.yml"})
 	for _, file := range files {
 		manifest, err := c.env.HasParentFilePath(file, false)
 		if err != nil || manifest.IsDir {
@@ -56,12 +56,11 @@ func (c *CfTarget) setCFTargetStatus() bool {
 
 	lines := strings.SplitSeq(output, "\n")
 	for line := range lines {
-		splitted := strings.SplitN(line, ":", 2)
-		if len(splitted) < 2 {
+		key, value, found := strings.Cut(line, ":")
+		if !found {
 			continue
 		}
-		key := splitted[0]
-		value := strings.TrimSpace(splitted[1])
+		value = strings.TrimSpace(value)
 		switch key {
 		case "API endpoint":
 			c.URL = value

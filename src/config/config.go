@@ -34,7 +34,7 @@ const (
 	UPGRADENOTICE = "notice"
 	RELOAD        = "reload"
 
-	Version = 3
+	Version = 4
 )
 
 type Action string
@@ -79,11 +79,11 @@ type Config struct {
 	ShellIntegration        bool `json:"shell_integration,omitempty" toml:"shell_integration,omitempty" yaml:"shell_integration,omitempty"`
 	FinalSpace              bool `json:"final_space,omitempty" toml:"final_space,omitempty" yaml:"final_space,omitempty"`
 	UpgradeNotice           bool `json:"-" toml:"-" yaml:"-"`
-	updated                 bool
 	extended                bool
 	PatchPwshBleed          bool `json:"patch_pwsh_bleed,omitempty" toml:"patch_pwsh_bleed,omitempty" yaml:"patch_pwsh_bleed,omitempty"`
 	AutoUpgrade             bool `json:"-" toml:"-" yaml:"-"`
 	EnableCursorPositioning bool `json:"enable_cursor_positioning,omitempty" toml:"enable_cursor_positioning,omitempty" yaml:"enable_cursor_positioning,omitempty"`
+	Streaming               int  `json:"streaming,omitempty" toml:"streaming,omitempty" yaml:"streaming,omitempty"`
 }
 
 func (cfg *Config) MakeColors(env runtime.Environment) color.String {
@@ -132,6 +132,15 @@ func (cfg *Config) Features(env runtime.Environment) shell.Features {
 		feats |= shell.Transient
 	}
 
+	if cfg.Streaming > 0 {
+		log.Debug("streaming enabled")
+		feats |= shell.Streaming
+	}
+
+	if feats&(shell.Streaming|shell.Transient) != 0 {
+		feats |= shell.KeyHandlers
+	}
+
 	unsupportedShells := []string{shell.ELVISH, shell.XONSH}
 	if slices.Contains(unsupportedShells, env.Shell()) {
 		cfg.ShellIntegration = false
@@ -175,7 +184,7 @@ func (cfg *Config) Features(env runtime.Environment) shell.Features {
 
 		for _, segment := range block.Segments {
 			if segment.Type == AZ {
-				source := segment.Properties.GetString(segments.Source, segments.FirstMatch)
+				source := segment.Options.String(segments.Source, segments.FirstMatch)
 				if strings.Contains(source, segments.Pwsh) {
 					log.Debug("azure enabled")
 					feats |= shell.Azure
@@ -183,7 +192,7 @@ func (cfg *Config) Features(env runtime.Environment) shell.Features {
 			}
 
 			if segment.Type == GIT {
-				source := segment.Properties.GetString(segments.Source, segments.Cli)
+				source := segment.Options.String(segments.Source, segments.Cli)
 				if source == segments.Pwsh {
 					log.Debug("posh-git enabled")
 					feats |= shell.PoshGit
@@ -225,6 +234,16 @@ func (cfg *Config) upgradeFeatures() shell.Features {
 
 func (cfg *Config) Hash() uint64 {
 	return cfg.hash
+}
+
+// migrateSegmentProperties migrates the deprecated Properties field to Options for all segments.
+// This is needed for TOML configs since go-toml/v2 doesn't support custom unmarshalers.
+func (cfg *Config) migrateSegmentProperties() {
+	for _, block := range cfg.Blocks {
+		for _, segment := range block.Segments {
+			segment.MigratePropertiesToOptions()
+		}
+	}
 }
 
 // toggleSegments processes all segments in all blocks and adds segments

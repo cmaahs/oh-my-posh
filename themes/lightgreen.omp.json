@@ -14,7 +14,7 @@
         {
           "background": "transparent",
           "foreground": "#ffffff",
-          "properties": {
+          "options": {
             "alpine": "\uf300",
             "arch": "\uf303",
             "centos": "\uf304",
@@ -29,8 +29,7 @@
             "opensuse": "\uf314",
             "raspbian": "\uf315",
             "ubuntu": "\uf31c",
-            "windows": "\ue62a",
-            "wsl": "\ue712"
+            "windows": "\ue62a"
           },
           "style": "plain",
           "template": " {{ if .WSL }}WSL at {{ end }}{{.Icon}} ",
@@ -40,7 +39,7 @@
           "background": "#272727",
           "foreground": "#3EC669",
           "leading_diamond": "\ue0b6",
-          "properties": {
+          "options": {
             "style": "folder"
           },
           "style": "diamond",
@@ -51,7 +50,7 @@
         {
           "background": "#272727",
           "foreground": "#00ff0d",
-          "properties": {
+          "options": {
             "fetch_status": true
           },
           "style": "plain",
@@ -109,7 +108,7 @@
       "alignment": "right",
       "segments": [
         {
-          "properties": {
+          "options": {
               "style": "roundrock",
               "always_enabled": true
             },
@@ -134,7 +133,7 @@
           "foreground": "#262626",
           "invert_powerline": true,
           "leading_diamond": "\ue0b2",
-          "properties": {
+          "options": {
             "charged_icon": "\uf240 ",
             "charging_icon": "\uf1e6 ",
             "discharging_icon": "\ue234 "
@@ -155,5 +154,5 @@
     }
   ],
   "pwd": "osc99",
-  "version": 3
+  "version": 4
 }

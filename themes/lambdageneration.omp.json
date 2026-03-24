@@ -15,7 +15,7 @@
         {
           "background": "#292929",
           "foreground": "#fb7e14",
-          "properties": {
+          "options": {
             "always_enabled": true,
             "style": "austin",
             "threshold": 500
@@ -34,9 +34,9 @@
         {
           "background": "#292929",
           "foreground": "#fb7e14",
-          "properties": {
-            "style": "full",
-            "trailing_diamond": "\ue0c6"
+          "trailing_diamond": "\ue0c6",
+          "options": {
+            "style": "full"
           },
           "style": "diamond",
           "template": " {{ .Path }} ",
@@ -56,11 +56,10 @@
             "{{ if eq \"Charging\" .State.String }}#40c4ff{{ end }}",
             "{{ if eq \"Discharging\" .State.String }}#fb7e14{{ end }}"
           ],
-          "properties": {
+          "options": {
             "charged_icon": "\uf240 ",
             "charging_icon": "\ueb2d ",
-            "discharging_icon": "\ueb2d ",
-            "text": "\ue0b0"
+            "discharging_icon": "\ueb2d "
           },
           "style": "powerline",
           "template": " {{ if not .Error }}{{ .Icon }}{{ .Percentage }}{{ end }}{{ .Error }} \ue0b1",
@@ -72,9 +71,8 @@
             "{{ if gt .Code 0 }}#292929{{ end }}"
           ],
           "foreground": "#fb7e14",
-          "properties": {
-            "always_enabled": true,
-            "display_exit_code": true
+          "options": {
+            "always_enabled": true
           },
           "style": "diamond",
           "template": " {{ if gt .Code 0 }}\uf00d {{ reason .Code }}{{ else }}\uf00c{{ end }} ",
@@ -98,7 +96,7 @@
         {
           "background": "#292929",
           "foreground": "#fb7e14",
-          "properties": {
+          "options": {
             "time_format": "15:04:05, _2"
           },
           "style": "diamond",
@@ -114,9 +112,6 @@
       "newline": true,
       "segments": [
         {
-          "properties": {
-            "always_enabled": true
-          },
           "background": "#fb7e14",
           "foreground": "#292929",
           "style": "diamond",
@@ -130,5 +125,5 @@
     }
   ],
   "final_space": true,
-  "version": 3
+  "version": 4
 }

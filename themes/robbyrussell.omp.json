@@ -12,7 +12,7 @@
         },
         {
           "foreground": "#56B6C2",
-          "properties": {
+          "options": {
             "style": "folder"
           },
           "style": "plain",
@@ -21,23 +21,18 @@
         },
         {
           "foreground": "#D0666F",
-          "properties": {
-            "branch_icon": ""
+          "options": {
+            "branch_icon": "",
+            "fetch_status": true
           },
           "style": "plain",
-          "template": " <#5FAAE8>git:(</>{{ .HEAD }}<#5FAAE8>)</>",
+          "template": " <#5FAAE8>git:(</>{{ .HEAD }}{{ if .Working.Changed }} <#FFEB3B>{{ .Working.String }}</>{{ end }}<#5FAAE8>)</>{{ if or .Working.Changed .Staging.Changed }} <#FFEB3B>\u2717</>{{ end }}",
           "type": "git"
-        },
-        {
-          "foreground": "#BF616A",
-          "style": "plain",
-          "template": " \u2717",
-          "type": "status"
         }
       ],
       "type": "prompt"
     }
   ],
   "final_space": true,
-  "version": 3
+  "version": 4
 }

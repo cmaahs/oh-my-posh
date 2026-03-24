@@ -10,6 +10,7 @@ import (
 
 	"github.com/jandedobbeleer/oh-my-posh/src/log"
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
+	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
 )
 
 type Owm struct {
@@ -32,11 +33,11 @@ const (
 	// APIEnv environment variable that holds the openweathermap api key
 	APIEnv properties.Property = "apienv"
 	// APIKey openweathermap api key
-	APIKey properties.Property = "api_key"
+	APIKey options.Option = "api_key"
 	// Location openweathermap location
-	Location properties.Property = "location"
+	Location options.Option = "location"
 	// Units openweathermap units
-	Units properties.Property = "units"
+	Units options.Option = "units"
 	// CacheKeyResponse key used when caching the response
 	// CacheKeyResponse string = "owm_response"
 	// CacheKeyURL key used when caching the url responsible for the response
@@ -51,6 +52,7 @@ const (
 	OWMAPIKey string = "POSH_OWM_API_KEY"
 	// Environmental variable to dynamically set the location string
 	OWMLocationKey string = "POSH_OWM_LOCATION"
+	CacheKeyURL    string = "owm_url"
 )
 
 type weather struct {
@@ -99,25 +101,21 @@ func (d *Owm) Template() string {
 func (d *Owm) getResult() (*owmDataResponse, error) {
 	response := new(owmDataResponse)
 
-	apikey := properties.OneOf(d.props, d.env.Getenv(OWMAPIKey), APIKey, "apiKey")
-	if apikey == "" {
-		apikey = "."
-	}
-
+	apikey := d.options.Template(APIKey, "", d)
 	if apikey == "" {
 		return nil, errors.New("no api key found")
 	}
 
-	location := d.props.GetString(Location, d.env.Getenv(OWMLocationKey))
+	location := d.options.Template(Location, "", d)
 	if location == "" {
 		return nil, errors.New("no location found")
 	}
 	location = url.QueryEscape(location)
 
-	apiEnv := d.props.GetString(APIEnv, "")
+	apiEnv := d.options.String(APIEnv, "")
 
-	units := d.props.GetString(Units, "standard")
-	httpTimeout := d.props.GetInt(properties.HTTPTimeout, properties.DefaultHTTPTimeout)
+	units := d.options.String(Units, "standard")
+	httpTimeout := d.options.Int(options.HTTPTimeout, options.DefaultHTTPTimeout)
 	if apiEnv != "" {
 		apikey, _ = os.LookupEnv(apiEnv)
 	}
@@ -139,7 +137,7 @@ func (d *Owm) getResult() (*owmDataResponse, error) {
 }
 
 func (d *Owm) setStatus() error {
-	units := d.props.GetString(Units, "standard")
+	units := d.options.String(Units, "standard")
 
 	q, err := d.getResult()
 	if err != nil {

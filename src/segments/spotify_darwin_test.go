@@ -6,8 +6,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/runtime/mock"
+	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -22,7 +22,7 @@ func TestSpotifyDarwinEnabledAndSpotifyPlaying(t *testing.T) {
 		{BatchedCase: "false|||", Expected: "", Enabled: false},
 		{BatchedCase: "false||", Expected: "", Error: errors.New("oops"), Enabled: false},
 		{BatchedCase: "true|playing|Candlemass|Spellbreaker", Expected: "\ue602 Candlemass - Spellbreaker", Enabled: true},
-		{BatchedCase: "true|paused|Candlemass|Spellbreaker", Expected: "\uF8E3 Candlemass - Spellbreaker", Enabled: true},
+		{BatchedCase: "true|paused|Candlemass|Spellbreaker", Expected: "\uf04c Candlemass - Spellbreaker", Enabled: true},
 	}
 	batchedCommand := `
 	if application "Spotify" is running then
@@ -45,7 +45,7 @@ func TestSpotifyDarwinEnabledAndSpotifyPlaying(t *testing.T) {
 		env.On("RunCommand", "osascript", []string{"-e", batchedCommand}).Return(tc.BatchedCase, tc.Error)
 
 		s := &Spotify{}
-		s.Init(properties.Map{}, env)
+		s.Init(options.Map{}, env)
 
 		assert.Equal(t, tc.Enabled, s.Enabled())
 		assert.Equal(t, tc.Expected, renderTemplate(env, s.Template(), s))
