@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/log"
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
 )
 
@@ -31,7 +30,7 @@ type Owm struct {
 
 const (
 	// APIEnv environment variable that holds the openweathermap api key
-	APIEnv properties.Property = "apienv"
+	APIEnv options.Option = "apienv"
 	// APIKey openweathermap api key
 	APIKey options.Option = "api_key"
 	// Location openweathermap location
@@ -43,7 +42,7 @@ const (
 	// CacheKeyURL key used when caching the url responsible for the response
 	// CacheKeyURL string = "owm_url"
 	// WithUnits is used to swith on an off the units on the individual measurements
-	WithUnits properties.Property = "with_units"
+	WithUnits options.Option = "with_units"
 
 	ImperialIndicator = "°F"
 	MetricIndicator   = "°C"
@@ -226,7 +225,7 @@ func (d *Owm) setStatus() error {
 	d.units = units
 	d.UnitIcon = "\ue33e"
 
-	withUnits := d.props.GetBool(WithUnits, true)
+	withUnits := d.options.Bool(WithUnits, true)
 	switch d.units {
 	case "imperial":
 		d.UnitIcon = ImperialIndicator // "°F" // \ue341"

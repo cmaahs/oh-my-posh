@@ -10,7 +10,7 @@ import (
 	git "github.com/go-git/go-git/v5"
 	"github.com/integralist/go-findroot/find"
 	"github.com/jandedobbeleer/oh-my-posh/src/log"
-	"github.com/jandedobbeleer/oh-my-posh/src/properties"
+	"github.com/jandedobbeleer/oh-my-posh/src/segments/options"
 	gl "github.com/maahsome/gitlab-go"
 	giturls "github.com/whilp/git-urls"
 )
@@ -40,19 +40,19 @@ type mergeRequest struct {
 
 const (
 	// EnvToken environment variable name that holds the gitlab personal access token
-	EnvToken properties.Property = "token_variable"
+	EnvToken options.Option = "token_variable"
 	// AccessToken gitlab personal access token
-	AccessToken properties.Property = "access_token"
+	AccessToken options.Option = "access_token"
 	// GitlabHost hostname of the gitlab instance
-	GitlabHost properties.Property = "gitlab_hostname"
+	GitlabHost options.Option = "gitlab_hostname"
 	// GitlabAPIVersion the api version of the gitlab instance
-	GitlabAPIVersion properties.Property = "gitlab_api_version"
+	GitlabAPIVersion options.Option = "gitlab_api_version"
 	// AuthorUsername gitlab username
-	AuthorUsername properties.Property = "author_username"
+	AuthorUsername options.Option = "author_username"
 	// AuthorOnly displays MRs for the AuthorUsername
-	AuthorOnly properties.Property = "author_only"
+	AuthorOnly options.Option = "author_only"
 	// RootOnly displays the segment only in the root of the git worktree
-	RootOnly properties.Property = "root_only"
+	RootOnly options.Option = "root_only"
 
 	// GitlabMRCacheKeyResponse key used when caching the response
 	// GitlabMRCacheKeyResponse string = "gitlabmr_response"
@@ -69,7 +69,7 @@ func (mr *GitlabMR) Enabled() bool {
 	if gerr != nil {
 		return false
 	}
-	rootOnly := mr.props.GetBool(RootOnly, true)
+	rootOnly := mr.options.Bool(RootOnly, true)
 	if rootOnly {
 		cwd, _ := os.Getwd()
 		if cwd != gitRoot.Path {
@@ -130,7 +130,7 @@ func (mr *GitlabMR) Enabled() bool {
 			return true
 		}
 		mr.ProjectID = fmt.Sprintf("%d", projectID)
-		authorOnly := mr.props.GetBool(AuthorOnly, false)
+		authorOnly := mr.options.Bool(AuthorOnly, false)
 		mr.doFetchGitlabMR(authorOnly, projectID)
 		mr.FromCache = ""
 	}
@@ -143,7 +143,7 @@ func (mr *GitlabMR) Template() string {
 
 // TODO: Fix all the duplicate opening of gitlab
 func (mr *GitlabMR) OriginMatch(gitRoot find.Stat) bool {
-	glHost := mr.props.GetString(GitlabHost, "gitlab.com")
+	glHost := mr.options.String(GitlabHost, "gitlab.com")
 
 	repo, rerr := git.PlainOpen(gitRoot.Path)
 	if rerr != nil {
@@ -162,9 +162,9 @@ func (mr *GitlabMR) OriginMatch(gitRoot find.Stat) bool {
 func (mr *GitlabMR) doFetchGitlabProjectID(gitRoot find.Stat) int {
 	var gitClient gl.GitlabClient
 
-	glHost := mr.props.GetString(GitlabHost, "gitlab.com")
-	tokenEnv := mr.props.GetString(EnvToken, "")
-	glToken := mr.props.GetString(AccessToken, "")
+	glHost := mr.options.String(GitlabHost, "gitlab.com")
+	tokenEnv := mr.options.String(EnvToken, "")
+	glToken := mr.options.String(AccessToken, "")
 	if tokenEnv != "" {
 		glToken = os.Getenv(tokenEnv)
 	}
@@ -202,10 +202,10 @@ func (mr *GitlabMR) doFetchGitlabProjectID(gitRoot find.Stat) int {
 func (mr *GitlabMR) doFetchGitlabMR(authorOnly bool, id int) {
 	var gitClient gl.GitlabClient
 
-	glHost := mr.props.GetString(GitlabHost, "gitlab.com")
-	tokenEnv := mr.props.GetString(EnvToken, "")
-	glToken := mr.props.GetString(AccessToken, "")
-	authorUsername := mr.props.GetString(AuthorUsername, "")
+	glHost := mr.options.String(GitlabHost, "gitlab.com")
+	tokenEnv := mr.options.String(EnvToken, "")
+	glToken := mr.options.String(AccessToken, "")
+	authorUsername := mr.options.String(AuthorUsername, "")
 	if tokenEnv != "" {
 		glToken = os.Getenv(tokenEnv)
 	}
